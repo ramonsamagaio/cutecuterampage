@@ -95,7 +95,7 @@ func _physics_process(delta: float) -> void:
 	var distance: float = global_position.distance_to(player_node.global_position)
 
 	match archetype:
-		"shooter": _move_shooter(delta, player_node, to_player, distance)
+		"shooter": _move_shooter(delta, to_player, distance)
 		"charger": _move_charger(delta, to_player, distance)
 		_: velocity = to_player * move_speed
 
@@ -108,7 +108,7 @@ func _physics_process(delta: float) -> void:
 		player_node.call("take_damage", contact_damage * impact_multiplier)
 		attack_cooldown = 0.9
 
-func _move_shooter(delta: float, player_node: Node2D, to_player: Vector2, distance: float) -> void:
+func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
 	visual.modulate = _base_modulate
 	if distance > 295.0:
 		velocity = to_player * move_speed
