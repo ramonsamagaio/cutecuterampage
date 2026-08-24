@@ -1,16 +1,16 @@
 class_name ChunkStreamer
 extends Node2D
 
-const CHUNK_SIZE := 16
-const TILE_SIZE := 32
-const ACTIVE_RADIUS := 2
+const CHUNK_SIZE: int = 16
+const TILE_SIZE: int = 32
+const ACTIVE_RADIUS: int = 2
 
 var player: Node2D
 var _tile_set: TileSet
 var _active: Dictionary = {}
 var _queued: Dictionary = {}
 var _queue: Array[Vector2i] = []
-var _last_center := Vector2i(999999, 999999)
+var _last_center: Vector2i = Vector2i(999999, 999999)
 
 func _ready() -> void:
 	z_index = -1000
@@ -19,38 +19,41 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if player == null:
 		return
-	var world_chunk := CHUNK_SIZE * TILE_SIZE
-	var center := Vector2i(
-		floori(player.global_position.x / world_chunk),
-		floori(player.global_position.y / world_chunk)
+	var world_chunk: int = CHUNK_SIZE * TILE_SIZE
+	var center: Vector2i = Vector2i(
+		floori(player.global_position.x / float(world_chunk)),
+		floori(player.global_position.y / float(world_chunk))
 	)
 	if center != _last_center:
 		_last_center = center
 		_refresh_requested_chunks(center)
 	# Important: one chunk per frame. Never dump a whole ring onto the main thread.
 	if not _queue.is_empty():
-		_build_chunk(_queue.pop_front())
+		var next_chunk: Vector2i = _queue.pop_front()
+		_build_chunk(next_chunk)
 
 func _refresh_requested_chunks(center: Vector2i) -> void:
-	var wanted := {}
+	var wanted: Dictionary = {}
 	for y in range(center.y - ACTIVE_RADIUS, center.y + ACTIVE_RADIUS + 1):
 		for x in range(center.x - ACTIVE_RADIUS, center.x + ACTIVE_RADIUS + 1):
-			var c := Vector2i(x, y)
+			var c: Vector2i = Vector2i(x, y)
 			wanted[c] = true
 			if not _active.has(c) and not _queued.has(c):
 				_queue.append(c)
 				_queued[c] = true
-	for c in _active.keys():
+	for key: Variant in _active.keys():
+		var c: Vector2i = key as Vector2i
 		if not wanted.has(c):
-			var layer: TileMapLayer = _active[c]
-			layer.queue_free()
+			var layer: TileMapLayer = _active[c] as TileMapLayer
+			if is_instance_valid(layer):
+				layer.queue_free()
 			_active.erase(c)
 
 func _build_chunk(coord: Vector2i) -> void:
 	_queued.erase(coord)
 	if _active.has(coord):
 		return
-	var layer := TileMapLayer.new()
+	var layer: TileMapLayer = TileMapLayer.new()
 	layer.name = "Chunk_%d_%d" % [coord.x, coord.y]
 	layer.tile_set = _tile_set
 	layer.position = Vector2(coord.x, coord.y) * float(CHUNK_SIZE * TILE_SIZE)
@@ -58,9 +61,9 @@ func _build_chunk(coord: Vector2i) -> void:
 	add_child(layer)
 	for y in CHUNK_SIZE:
 		for x in CHUNK_SIZE:
-			var wx := coord.x * CHUNK_SIZE + x
-			var wy := coord.y * CHUNK_SIZE + y
-			var mixed := abs((wx * 73856093) ^ (wy * 19349663))
-			var variant := mixed % 4
+			var wx: int = coord.x * CHUNK_SIZE + x
+			var wy: int = coord.y * CHUNK_SIZE + y
+			var mixed: int = absi((wx * 73856093) ^ (wy * 19349663))
+			var variant: int = mixed % 4
 			layer.set_cell(Vector2i(x, y), 0, Vector2i(variant, 0), 0)
 	_active[coord] = layer
