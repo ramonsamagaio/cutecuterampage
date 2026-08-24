@@ -16,12 +16,12 @@ var special_meter: float = 0.0
 var combo: int = 0
 var combo_timer: float = 0.0
 
-var _fire_timer := 0.0
-var _dash_timer := 0.0
-var _dash_cooldown := 0.0
-var _dash_direction := Vector2.RIGHT
-var _walk_phase := 0.0
-var _facing := 1.0
+var _fire_timer: float = 0.0
+var _dash_timer: float = 0.0
+var _dash_cooldown: float = 0.0
+var _dash_direction: Vector2 = Vector2.RIGHT
+var _walk_phase: float = 0.0
+var _facing: float = 1.0
 
 @onready var visual: Node2D = $Visual
 @onready var hip: Bone2D = $Visual/Skeleton2D/HipRoot
@@ -36,7 +36,7 @@ var _facing := 1.0
 @onready var leg_l: Bone2D = $Visual/Skeleton2D/HipRoot/LegL
 @onready var leg_r: Bone2D = $Visual/Skeleton2D/HipRoot/LegR
 
-var _rest := {}
+var _rest: Dictionary[String, Vector2] = {}
 
 func _ready() -> void:
 	add_to_group("player")
@@ -65,8 +65,8 @@ func _physics_process(delta: float) -> void:
 	if combo_timer <= 0.0:
 		combo = 0
 
-	var input_dir := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
-	var wasd := Vector2.ZERO
+	var input_dir: Vector2 = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	var wasd: Vector2 = Vector2.ZERO
 	if Input.is_key_pressed(KEY_A): wasd.x -= 1.0
 	if Input.is_key_pressed(KEY_D): wasd.x += 1.0
 	if Input.is_key_pressed(KEY_W): wasd.y -= 1.0
@@ -89,7 +89,7 @@ func _physics_process(delta: float) -> void:
 func _start_dash() -> void:
 	if _dash_cooldown > 0.0:
 		return
-	var dir := velocity.normalized()
+	var dir: Vector2 = velocity.normalized()
 	if dir == Vector2.ZERO:
 		dir = Vector2(_facing, 0.0)
 	_dash_direction = dir
@@ -102,13 +102,13 @@ func _animate_skeleton(delta: float, moving: bool) -> void:
 		_walk_phase = fmod(_walk_phase + delta * 10.0, TAU)
 	else:
 		_walk_phase = lerpf(_walk_phase, 0.0, minf(1.0, delta * 10.0))
-	var s := sin(_walk_phase)
-	var bounce := -round(abs(sin(_walk_phase * 2.0)) * (1.0 if moving else 0.35))
-	hip.position = _rest["hip"] + Vector2(0, bounce)
-	torso.position = _rest["torso"] + Vector2(0, round(-abs(sin(_walk_phase * 2.0 - 0.18)) * 0.5))
-	head.position = _rest["head"] + Vector2(0, round(-abs(sin(_walk_phase * 2.0 - 0.32)) * 0.5))
-	leg_l.position = _rest["leg_l"] + Vector2(round(s * 1.2), -round(maxf(0.0, s) * 1.0))
-	leg_r.position = _rest["leg_r"] + Vector2(round(-s * 1.2), -round(maxf(0.0, -s) * 1.0))
+	var s: float = sin(_walk_phase)
+	var bounce: float = -roundf(absf(sin(_walk_phase * 2.0)) * (1.0 if moving else 0.35))
+	hip.position = _rest["hip"] + Vector2(0.0, bounce)
+	torso.position = _rest["torso"] + Vector2(0.0, roundf(-absf(sin(_walk_phase * 2.0 - 0.18)) * 0.5))
+	head.position = _rest["head"] + Vector2(0.0, roundf(-absf(sin(_walk_phase * 2.0 - 0.32)) * 0.5))
+	leg_l.position = _rest["leg_l"] + Vector2(roundf(s * 1.2), -roundf(maxf(0.0, s)))
+	leg_r.position = _rest["leg_r"] + Vector2(roundf(-s * 1.2), -roundf(maxf(0.0, -s)))
 	arm_back.rotation = s * 0.12 if moving else sin(Time.get_ticks_msec() * 0.003) * 0.025
 	arm_weapon.rotation = -0.03 + (s * 0.025 if moving else 0.0)
 	ear_l.rotation = sin(_walk_phase - 0.42) * 0.055 if moving else sin(Time.get_ticks_msec() * 0.0022) * 0.018
@@ -118,27 +118,27 @@ func _animate_skeleton(delta: float, moving: bool) -> void:
 func _auto_fire() -> void:
 	if _fire_timer > 0.0:
 		return
-	var game := get_tree().get_first_node_in_group("game")
+	var game: Node = get_tree().get_first_node_in_group("game")
 	if game == null:
 		return
-	var target: Node2D = game.get_nearest_enemy(global_position)
+	var target: Node2D = game.call("get_nearest_enemy", global_position) as Node2D
 	if target == null:
 		return
-	var origin := weapon_socket.global_position
-	var base_dir := origin.direction_to(target.global_position)
+	var origin: Vector2 = weapon_socket.global_position
+	var base_dir: Vector2 = origin.direction_to(target.global_position)
 	if absf(base_dir.x) > 0.15:
 		_facing = signf(base_dir.x)
-	for i in multishot:
-		var offset_index := float(i) - float(multishot - 1) * 0.5
-		var dir := base_dir.rotated(offset_index * 0.09)
-		game.spawn_projectile(origin, dir, damage, "heart")
+	for i: int in multishot:
+		var offset_index: float = float(i) - float(multishot - 1) * 0.5
+		var dir: Vector2 = base_dir.rotated(offset_index * 0.09)
+		game.call("spawn_projectile", origin, dir, damage, "heart")
 	_fire_timer = fire_interval
 
 func take_damage(amount: float) -> void:
 	hp = maxf(0.0, hp - amount)
-	var blood := get_tree().get_first_node_in_group("blood_system")
-	if blood:
-		blood.emit_burst(global_position, Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)), 5)
+	var blood: Node = get_tree().get_first_node_in_group("blood_system")
+	if blood != null:
+		blood.call("emit_burst", global_position, Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)), 5)
 	if hp <= 0.0:
 		# Placeholder respawn loop while the meta-game is not implemented.
 		hp = max_hp
