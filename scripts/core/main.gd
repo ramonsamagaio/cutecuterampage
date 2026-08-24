@@ -110,17 +110,16 @@ func explode_cupcake(center: Vector2, damage_amount: float, radius: float, evolv
 			enemy.call("take_damage", damage_amount * falloff, center.direction_to(enemy.global_position), distance < radius * 0.35)
 	blood.emit_burst(center, Vector2.UP, 13 if evolved else 7)
 	if evolved:
-		# Birthday Massacre throws a ring of piercing sugar-stars after the blast.
 		for i: int in 10:
 			var angle: float = TAU * float(i) / 10.0
 			spawn_projectile(center, Vector2.RIGHT.rotated(angle), damage_amount * 0.42, "star", 1, 460.0)
 
-func ensure_love_orbit(owner: TaffiController, level_value: int, evolved: bool) -> void:
+func ensure_love_orbit(player_owner: TaffiController, level_value: int, evolved: bool) -> void:
 	if love_orbit == null or not is_instance_valid(love_orbit):
 		love_orbit = LoveOrbit.new()
 		love_orbit.name = "LoveOrbit"
 		add_child(love_orbit)
-		love_orbit.configure(owner, level_value, evolved)
+		love_orbit.configure(player_owner, level_value, evolved)
 	else:
 		love_orbit.update_stats(level_value, evolved)
 
