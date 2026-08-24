@@ -95,7 +95,11 @@ func _fire_ring(to_player: Vector2) -> void:
 			game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(fan_angle), contact_damage * 0.55, speed * 1.12)
 
 func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critical: bool = false) -> void:
-	health = maxf(0.0, health - amount)
+	# Screen-clear attacks should feel enormous without deleting a boss in a single tick.
+	var applied_damage: float = amount
+	if amount >= 1000.0:
+		applied_damage = 24.0 * power_scale
+	health = maxf(0.0, health - applied_damage)
 	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
 	if blood_node != null:
 		blood_node.call("emit_burst", global_position + hit_direction * 12.0, hit_direction, 6 if is_critical else 3)
@@ -136,7 +140,6 @@ func _draw() -> void:
 	if pulse > 0.02:
 		draw_circle(Vector2.ZERO, 58.0 + pulse * 18.0, warning)
 
-	# Huge marshmallow-cat placeholder, deliberately chunky.
 	draw_circle(Vector2.ZERO, 45.0, ink)
 	draw_circle(Vector2.ZERO, 40.0, white)
 	draw_rect(Rect2(-34, -42, 20, 23), ink)
@@ -150,8 +153,6 @@ func _draw() -> void:
 	draw_rect(Rect2(-4, 5, 8, 5), hot)
 	draw_rect(Rect2(-23, 12, 13, 7), pink)
 	draw_rect(Rect2(10, 12, 13, 7), pink)
-
-	# Crown.
 	draw_rect(Rect2(-24, -60, 48, 12), ink)
 	draw_rect(Rect2(-21, -57, 42, 8), gold)
 	draw_rect(Rect2(-20, -69, 9, 14), gold)
