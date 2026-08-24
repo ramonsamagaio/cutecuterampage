@@ -7,6 +7,7 @@ var spawn_timer: float = 0.30
 var next_surge: float = 16.0
 var burst_remaining: int = 0
 var threat_tier: int = 1
+var boss_spawned: bool = false
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -20,19 +21,31 @@ func _process(delta: float) -> void:
 	var player_level: int = int(player.call("get_level_value"))
 	threat_tier = 1 + floori(elapsed / 50.0) + floori(float(maxi(0, player_level - 1)) / 8.0)
 
-	if elapsed >= next_surge:
+	var game_node: Node = get_tree().get_first_node_in_group("game")
+	if not boss_spawned and elapsed >= 150.0 and game_node != null:
+		boss_spawned = true
+		var boss_power: float = 1.0 + float(threat_tier) * 0.18 + float(player_level) * 0.035
+		game_node.call("spawn_boss", boss_power)
+
+	var boss_active: bool = bool(game_node.call("is_boss_active")) if game_node != null else false
+	if elapsed >= next_surge and not boss_active:
 		burst_remaining += 8 + threat_tier * 5
 		next_surge += maxf(16.0, 24.0 - float(threat_tier) * 0.55)
 
 	var count: int = get_tree().get_nodes_in_group("enemy").size()
 	var max_enemies: int = mini(340, 55 + player_level * 3 + floori(elapsed * 0.55))
+	if boss_active:
+		max_enemies = mini(max_enemies, 95 + threat_tier * 5)
+
 	if spawn_timer <= 0.0 and count < max_enemies:
 		_spawn_enemy(player_level)
-		if burst_remaining > 0:
+		if burst_remaining > 0 and not boss_active:
 			burst_remaining -= 1
 			spawn_timer = 0.065
 		else:
 			var cadence: float = 0.78 - elapsed * 0.0022 - float(player_level) * 0.0065
+			if boss_active:
+				cadence *= 1.65
 			spawn_timer = maxf(0.075, cadence)
 
 func _spawn_enemy(player_level: int) -> void:
@@ -52,6 +65,9 @@ func _spawn_enemy(player_level: int) -> void:
 
 	var elite_chance: float = clampf(0.015 + float(threat_tier) * 0.014, 0.02, 0.18)
 	enemy.elite = rng.randf() < elite_chance
+	if enemy.elite:
+		var affixes: Array[String] = ["swift", "tank", "volatile"]
+		enemy.elite_affix = affixes[rng.randi_range(0, affixes.size() - 1)]
 	var level_term: float = pow(float(maxi(0, player_level - 1)), 1.18) * 0.065
 	enemy.power_scale = 1.0 + elapsed / 95.0 + level_term
 
