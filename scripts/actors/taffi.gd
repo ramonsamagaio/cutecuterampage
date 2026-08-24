@@ -36,7 +36,7 @@ var _facing: float = 1.0
 @onready var leg_l: Bone2D = $Visual/Skeleton2D/HipRoot/LegL
 @onready var leg_r: Bone2D = $Visual/Skeleton2D/HipRoot/LegR
 
-var _rest: Dictionary = {}
+var _rest: Dictionary[String, Vector2] = {}
 
 func _ready() -> void:
 	add_to_group("player")
@@ -118,27 +118,27 @@ func _animate_skeleton(delta: float, moving: bool) -> void:
 func _auto_fire() -> void:
 	if _fire_timer > 0.0:
 		return
-	var game: Variant = get_tree().get_first_node_in_group("game")
+	var game: Node = get_tree().get_first_node_in_group("game")
 	if game == null:
 		return
-	var target: Node2D = game.get_nearest_enemy(global_position) as Node2D
+	var target: Node2D = game.call("get_nearest_enemy", global_position) as Node2D
 	if target == null:
 		return
 	var origin: Vector2 = weapon_socket.global_position
 	var base_dir: Vector2 = origin.direction_to(target.global_position)
 	if absf(base_dir.x) > 0.15:
 		_facing = signf(base_dir.x)
-	for i in multishot:
+	for i: int in multishot:
 		var offset_index: float = float(i) - float(multishot - 1) * 0.5
 		var dir: Vector2 = base_dir.rotated(offset_index * 0.09)
-		game.spawn_projectile(origin, dir, damage, "heart")
+		game.call("spawn_projectile", origin, dir, damage, "heart")
 	_fire_timer = fire_interval
 
 func take_damage(amount: float) -> void:
 	hp = maxf(0.0, hp - amount)
-	var blood: Variant = get_tree().get_first_node_in_group("blood_system")
-	if blood:
-		blood.emit_burst(global_position, Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)), 5)
+	var blood: Node = get_tree().get_first_node_in_group("blood_system")
+	if blood != null:
+		blood.call("emit_burst", global_position, Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)), 5)
 	if hp <= 0.0:
 		# Placeholder respawn loop while the meta-game is not implemented.
 		hp = max_hp
