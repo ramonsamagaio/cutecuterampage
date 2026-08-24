@@ -40,8 +40,10 @@ func _apply_kind(kind: String) -> void:
 	if current_kind == kind and art.visible:
 		return
 	current_kind = kind
+	# These sizes are display-canvas sizes only. The original PNGs are kept intact;
+	# CutoutArtPart scales the Sprite2D and uses the pivot to place the grip on socket.
 	match kind:
-		"cupcake": art.configure(CUPCAKE_PATH, Vector2(14.0, 9.0), Vector2(0.12, 0.53))
-		"star": art.configure(STAR_PATH, Vector2(13.0, 9.0), Vector2(0.12, 0.54))
-		"bow": art.configure(BOW_PATH, Vector2(13.0, 11.0), Vector2(0.18, 0.52))
-		_: art.configure(HEART_PATH, Vector2(13.0, 9.0), Vector2(0.12, 0.54))
+		"cupcake": art.configure(CUPCAKE_PATH, Vector2(18.0, 14.0), Vector2(0.16, 0.53))
+		"star": art.configure(STAR_PATH, Vector2(18.0, 14.0), Vector2(0.16, 0.54))
+		"bow": art.configure(BOW_PATH, Vector2(18.0, 18.0), Vector2(0.22, 0.52))
+		_: art.configure(HEART_PATH, Vector2(18.0, 14.0), Vector2(0.16, 0.54))
