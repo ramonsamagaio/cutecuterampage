@@ -4,6 +4,8 @@ extends CharacterBody2D
 signal level_up_requested
 signal special_requested
 
+const VISUAL_SCALE: float = 1.65
+
 @export var move_speed: float = 118.0
 @export var max_hp: float = 100.0
 
@@ -30,7 +32,6 @@ var orbit_evolved: bool = false
 
 var cute_meter: float = 0.0
 var _cute_decay_delay: float = 0.0
-
 var _fire_timer: float = 0.0
 var _cupcake_timer: float = 1.25
 var _dash_timer: float = 0.0
@@ -54,6 +55,7 @@ var _upgrade_levels: Dictionary[String, int] = {}
 @onready var arm_back: Bone2D = $Visual/Skeleton2D/HipRoot/Torso/ArmBack
 @onready var arm_weapon: Bone2D = $Visual/Skeleton2D/HipRoot/Torso/ArmWeapon
 @onready var weapon_socket: Marker2D = $Visual/Skeleton2D/HipRoot/Torso/ArmWeapon/WeaponSocket
+@onready var weapon_visual: TaffiWeaponVisual = $Visual/Skeleton2D/HipRoot/Torso/ArmWeapon/WeaponSocket/WeaponVisual
 @onready var leg_l: Bone2D = $Visual/Skeleton2D/HipRoot/LegL
 @onready var leg_r: Bone2D = $Visual/Skeleton2D/HipRoot/LegR
 
@@ -72,6 +74,7 @@ func _ready() -> void:
 		"leg_l": leg_l.position,
 		"leg_r": leg_r.position
 	}
+	_refresh_weapon_visual()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -127,7 +130,7 @@ func _start_dash() -> void:
 	_dash_cooldown = _dash_cooldown_base
 
 func _animate_skeleton(delta: float, moving: bool) -> void:
-	visual.scale = Vector2(3.0 * _facing, 3.0)
+	visual.scale = Vector2(VISUAL_SCALE * _facing, VISUAL_SCALE)
 	if moving:
 		_walk_phase = fmod(_walk_phase + delta * (7.5 if special_channeling else 10.0), TAU)
 	else:
@@ -137,13 +140,13 @@ func _animate_skeleton(delta: float, moving: bool) -> void:
 	hip.position = _rest["hip"] + Vector2(0.0, bounce)
 	torso.position = _rest["torso"] + Vector2(0.0, roundf(-absf(sin(_walk_phase * 2.0 - 0.18)) * 0.5))
 	head.position = _rest["head"] + Vector2(0.0, roundf(-absf(sin(_walk_phase * 2.0 - 0.32)) * 0.5))
-	leg_l.position = _rest["leg_l"] + Vector2(roundf(s * 1.2), -roundf(maxf(0.0, s)))
-	leg_r.position = _rest["leg_r"] + Vector2(roundf(-s * 1.2), -roundf(maxf(0.0, -s)))
-	arm_back.rotation = s * 0.12 if moving else sin(float(Time.get_ticks_msec()) * 0.003) * 0.025
-	arm_weapon.rotation = -0.03 + (s * 0.018 if moving else 0.0)
-	ear_l.rotation = sin(_walk_phase - 0.42) * 0.055 if moving else sin(float(Time.get_ticks_msec()) * 0.0022) * 0.018
-	ear_r.rotation = sin(_walk_phase - 0.56) * 0.05 if moving else sin(float(Time.get_ticks_msec()) * 0.0020) * 0.015
-	bow.rotation = sin(_walk_phase - 0.35) * 0.035 if moving else 0.0
+	leg_l.position = _rest["leg_l"] + Vector2(roundf(s * 1.0), -roundf(maxf(0.0, s)))
+	leg_r.position = _rest["leg_r"] + Vector2(roundf(-s * 1.0), -roundf(maxf(0.0, -s)))
+	arm_back.rotation = s * 0.11 if moving else sin(float(Time.get_ticks_msec()) * 0.003) * 0.022
+	arm_weapon.rotation = -0.03 + (s * 0.016 if moving else 0.0)
+	ear_l.rotation = sin(_walk_phase - 0.42) * 0.065 if moving else sin(float(Time.get_ticks_msec()) * 0.0022) * 0.020
+	ear_r.rotation = sin(_walk_phase - 0.56) * 0.058 if moving else sin(float(Time.get_ticks_msec()) * 0.0020) * 0.018
+	bow.rotation = sin(_walk_phase - 0.35) * 0.045 if moving else sin(float(Time.get_ticks_msec()) * 0.0024) * 0.012
 
 func _update_weapons(delta: float) -> void:
 	_auto_fire_heart()
@@ -160,6 +163,7 @@ func _auto_fire_heart() -> void:
 	var target: Node2D = game.call("get_nearest_enemy", global_position) as Node2D
 	if target == null:
 		return
+	_refresh_weapon_visual()
 	var origin: Vector2 = weapon_socket.global_position
 	var base_dir: Vector2 = origin.direction_to(target.global_position)
 	if absf(base_dir.x) > 0.15:
@@ -190,6 +194,7 @@ func _auto_fire_cupcake(delta: float) -> void:
 	var target: Node2D = game.call("get_priority_enemy", global_position, 720.0) as Node2D
 	if target == null:
 		return
+	weapon_visual.flash_weapon("cupcake", 0.48)
 	var level_factor: float = float(cupcake_level)
 	var mortar_damage: float = damage * (1.35 + level_factor * 0.42) * get_cute_damage_multiplier()
 	var radius: float = 58.0 + level_factor * 7.0 + (32.0 if cupcake_evolved else 0.0)
@@ -200,6 +205,16 @@ func _sync_orbit() -> void:
 	var game: Node = get_tree().get_first_node_in_group("game")
 	if game != null:
 		game.call("ensure_love_orbit", self, orbit_level, orbit_evolved)
+
+func _refresh_weapon_visual() -> void:
+	if not is_instance_valid(weapon_visual):
+		return
+	var kind: String = "heart"
+	if heart_evolved:
+		kind = "bow"
+	elif orbit_level > 0:
+		kind = "star"
+	weapon_visual.set_base_weapon(kind)
 
 func take_damage(amount: float) -> void:
 	if _dash_timer > 0.0 or _invulnerable_timer > 0.0:
@@ -256,6 +271,7 @@ func apply_upgrade(id: String) -> void:
 		"love_orbit":
 			orbit_level = mini(6, orbit_level + 1)
 			_sync_orbit()
+	_refresh_weapon_visual()
 
 func can_take_upgrade(id: String) -> bool:
 	match id:
@@ -270,6 +286,7 @@ func can_take_upgrade(id: String) -> bool:
 func claim_evolution_chest() -> String:
 	if not heart_evolved and heart_level >= 4 and multishot >= 3:
 		heart_evolved = true
+		_refresh_weapon_visual()
 		return "EVOLUTION!  HEARTSTORM ♡"
 	if not cupcake_evolved and cupcake_level >= 4:
 		cupcake_evolved = true
@@ -277,6 +294,7 @@ func claim_evolution_chest() -> String:
 	if not orbit_evolved and orbit_level >= 4:
 		orbit_evolved = true
 		_sync_orbit()
+		_refresh_weapon_visual()
 		return "EVOLUTION!  HALO OF HUGS!"
 	if cupcake_level <= 0:
 		cupcake_level = 1
@@ -284,6 +302,7 @@ func claim_evolution_chest() -> String:
 	if orbit_level <= 0:
 		orbit_level = 1
 		_sync_orbit()
+		_refresh_weapon_visual()
 		return "NEW WEAPON!  LOVE ORBIT"
 	damage += 6.0
 	max_hp += 12.0
@@ -369,9 +388,12 @@ func is_dashing() -> bool:
 func begin_special_channel() -> void:
 	special_channeling = true
 	_dash_timer = 0.0
+	weapon_visual.visible = false
 
 func end_special_channel() -> void:
 	special_channeling = false
+	weapon_visual.visible = true
+	_refresh_weapon_visual()
 
 func set_special_aim(direction: Vector2) -> void:
 	if absf(direction.x) > 0.05:

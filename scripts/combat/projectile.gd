@@ -8,6 +8,7 @@ var projectile_kind: String = "heart"
 var critical: bool = false
 var pierce_remaining: int = 0
 var _hit_ids: Dictionary[int, bool] = {}
+var art: CutoutArtPart
 
 func configure(origin: Vector2, direction: Vector2, amount: float, kind: String = "heart", pierce: int = 0, speed: float = 390.0) -> void:
 	global_position = origin
@@ -15,10 +16,22 @@ func configure(origin: Vector2, direction: Vector2, amount: float, kind: String 
 	damage = amount
 	projectile_kind = kind
 	pierce_remaining = maxi(0, pierce)
-	rotation = direction.angle()
 	critical = randf() < (0.13 if projectile_kind == "heartstorm" else 0.08)
 	life = 1.9 if projectile_kind == "heartstorm" else 1.5
-	queue_redraw()
+	_build_visual()
+
+func _build_visual() -> void:
+	if art != null and is_instance_valid(art):
+		art.queue_free()
+	art = CutoutArtPart.new()
+	art.name = "ProjectileArt"
+	match projectile_kind:
+		"heartstorm": art.configure("res://assets/fx/CoracaoAlado.png", Vector2(13, 13), Vector2(0.5, 0.5))
+		"star": art.configure("res://assets/fx/Estrela.png", Vector2(9, 9), Vector2(0.5, 0.5))
+		"candy": art.configure("res://assets/fx/MorangoHaf.png", Vector2(9, 9), Vector2(0.5, 0.5))
+		_: art.configure("res://assets/fx/CoracaoRosaCheio.png", Vector2(10, 10), Vector2(0.5, 0.5))
+	add_child(art)
+	z_index = 18
 
 func _process(delta: float) -> void:
 	position += velocity * delta
@@ -37,6 +50,7 @@ func _process(delta: float) -> void:
 		if global_position.distance_squared_to(enemy.global_position) <= hit_radius * hit_radius:
 			_hit_ids[id] = true
 			enemy.call("take_damage", damage * (1.75 if critical else 1.0), velocity.normalized(), critical)
+			_spawn_hit_fx()
 			if pierce_remaining > 0:
 				pierce_remaining -= 1
 				velocity *= 0.96
@@ -44,25 +58,8 @@ func _process(delta: float) -> void:
 				queue_free()
 				return
 
-func _draw() -> void:
-	match projectile_kind:
-		"heartstorm":
-			draw_rect(Rect2(-5, -3, 4, 4), Color("ff4b94"))
-			draw_rect(Rect2(1, -3, 4, 4), Color("ff4b94"))
-			draw_rect(Rect2(-6, 0, 12, 4), Color("ff4b94"))
-			draw_rect(Rect2(-4, 4, 8, 3), Color("e52f76"))
-			draw_rect(Rect2(-1, 7, 2, 2), Color("e52f76"))
-			draw_rect(Rect2(-3, -2, 2, 2), Color("fff2f8"))
-		"star":
-			draw_rect(Rect2(-3, -1, 6, 2), Color("ffd64d"))
-			draw_rect(Rect2(-1, -3, 2, 6), Color("ffd64d"))
-			draw_rect(Rect2(-1, -1, 2, 2), Color("fff7c2"))
-		"candy":
-			draw_rect(Rect2(-4, -2, 8, 4), Color("ff6ca8"))
-			draw_rect(Rect2(-6, -1, 2, 2), Color("f6b6dc"))
-			draw_rect(Rect2(4, -1, 2, 2), Color("f6b6dc"))
-		_:
-			draw_rect(Rect2(-3, -2, 2, 2), Color("ff62a0"))
-			draw_rect(Rect2(1, -2, 2, 2), Color("ff62a0"))
-			draw_rect(Rect2(-4, 0, 8, 2), Color("ff62a0"))
-			draw_rect(Rect2(-2, 2, 4, 2), Color("e93278"))
+func _spawn_hit_fx() -> void:
+	var game_node: Node = get_tree().get_first_node_in_group("game")
+	if game_node == null:
+		return
+	game_node.call("spawn_cute_fx", global_position, "crit" if critical else "impact", velocity.normalized(), 1.0)

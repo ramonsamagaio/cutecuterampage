@@ -1,13 +1,14 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/actors/taffi.gd" id="1_taffi"]
-[ext_resource type="Script" path="res://scripts/actors/pixel_part.gd" id="2_part"]
+[ext_resource type="Script" path="res://scripts/art/cutout_art_part.gd" id="2_art"]
+[ext_resource type="Script" path="res://scripts/art/weapon_visual.gd" id="3_weapon"]
 
 [node name="Taffi" type="CharacterBody2D"]
 script = ExtResource("1_taffi")
 
 [node name="Visual" type="Node2D" parent="."]
-scale = Vector2(3, 3)
+scale = Vector2(1.65, 1.65)
 
 [node name="Skeleton2D" type="Skeleton2D" parent="Visual"]
 
@@ -21,111 +22,134 @@ bone_angle = -90.0
 position = Vector2(0, -3)
 rest = Transform2D(1, 0, 0, 1, 0, -3)
 auto_calculate_length_and_angle = false
-length = 7.0
+length = 8.0
 bone_angle = -90.0
 
 [node name="TorsoPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
-script = ExtResource("2_part")
-part_kind = "torso"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/Corpo.png"
+target_size = Vector2(13, 13)
+pivot_fraction = Vector2(0.5, 0.35)
 
 [node name="Head" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
-position = Vector2(0, -7)
-rest = Transform2D(1, 0, 0, 1, 0, -7)
+position = Vector2(0, -8)
+rest = Transform2D(1, 0, 0, 1, 0, -8)
 auto_calculate_length_and_angle = false
-length = 6.0
+length = 8.0
 bone_angle = -90.0
 
 [node name="HeadPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
-script = ExtResource("2_part")
-part_kind = "head"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/Cabeca.png"
+target_size = Vector2(18, 15)
+pivot_fraction = Vector2(0.5, 0.62)
+art_z_index = 2
 
 [node name="EarL" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
-position = Vector2(-3, -6)
-rest = Transform2D(1, 0, 0, 1, -3, -6)
+position = Vector2(-4, -8)
+rest = Transform2D(1, 0, 0, 1, -4, -8)
 auto_calculate_length_and_angle = false
-length = 6.0
+length = 11.0
 bone_angle = -90.0
 
 [node name="EarLPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/EarL"]
-script = ExtResource("2_part")
-part_kind = "ear_l"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/Ore1.png"
+target_size = Vector2(6, 12)
+pivot_fraction = Vector2(0.5, 0.94)
+art_z_index = -1
 
 [node name="EarR" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
-position = Vector2(3, -6)
-rest = Transform2D(1, 0, 0, 1, 3, -6)
+position = Vector2(4, -8)
+rest = Transform2D(1, 0, 0, 1, 4, -8)
 auto_calculate_length_and_angle = false
-length = 6.0
+length = 11.0
 bone_angle = -90.0
 
 [node name="EarRPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/EarR"]
-script = ExtResource("2_part")
-part_kind = "ear_r"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/Ore2.png"
+target_size = Vector2(6, 12)
+pivot_fraction = Vector2(0.5, 0.94)
+art_z_index = -1
 
 [node name="Bow" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
-position = Vector2(-4, -4)
-rest = Transform2D(1, 0, 0, 1, -4, -4)
+position = Vector2(-5, -6)
+rest = Transform2D(1, 0, 0, 1, -5, -6)
 auto_calculate_length_and_angle = false
-length = 4.0
+length = 5.0
 bone_angle = 0.0
 
 [node name="BowPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/Bow"]
-script = ExtResource("2_part")
-part_kind = "bow"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/Laco.png"
+target_size = Vector2(9, 7)
+pivot_fraction = Vector2(0.62, 0.55)
+art_z_index = 4
 
 [node name="ArmBack" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
-position = Vector2(-5, 0)
-rest = Transform2D(1, 0, 0, 1, -5, 0)
+position = Vector2(-6, -1)
+rest = Transform2D(1, 0, 0, 1, -6, -1)
 auto_calculate_length_and_angle = false
-length = 5.0
+length = 6.0
 bone_angle = 180.0
 
 [node name="ArmBackPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmBack"]
-script = ExtResource("2_part")
-part_kind = "arm_back"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/MaoEsq.png"
+target_size = Vector2(6, 7)
+pivot_fraction = Vector2(0.5, 0.15)
+art_z_index = 1
 
 [node name="ArmWeapon" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
-position = Vector2(5, 0)
-rest = Transform2D(1, 0, 0, 1, 5, 0)
+position = Vector2(6, -1)
+rest = Transform2D(1, 0, 0, 1, 6, -1)
 auto_calculate_length_and_angle = false
-length = 5.0
+length = 7.0
 bone_angle = 0.0
 
 [node name="ArmWeaponPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon"]
-script = ExtResource("2_part")
-part_kind = "arm_weapon"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/BraçoDir.png"
+target_size = Vector2(7, 7)
+pivot_fraction = Vector2(0.45, 0.15)
+art_z_index = 3
 
 [node name="WeaponSocket" type="Marker2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon"]
-position = Vector2(3, 1)
+position = Vector2(4, 1)
 
-[node name="WeaponPlaceholder" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon/WeaponSocket"]
-script = ExtResource("2_part")
-part_kind = "weapon_blaster"
+[node name="WeaponVisual" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon/WeaponSocket"]
+script = ExtResource("3_weapon")
 
 [node name="LegL" type="Bone2D" parent="Visual/Skeleton2D/HipRoot"]
-position = Vector2(-2, 5)
-rest = Transform2D(1, 0, 0, 1, -2, 5)
+position = Vector2(-3, 5)
+rest = Transform2D(1, 0, 0, 1, -3, 5)
 auto_calculate_length_and_angle = false
-length = 5.0
+length = 6.0
 bone_angle = 90.0
 
 [node name="LegLPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/LegL"]
-script = ExtResource("2_part")
-part_kind = "leg"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/PernaEsq.png"
+target_size = Vector2(5, 6)
+pivot_fraction = Vector2(0.5, 0.1)
 
 [node name="LegR" type="Bone2D" parent="Visual/Skeleton2D/HipRoot"]
-position = Vector2(2, 5)
-rest = Transform2D(1, 0, 0, 1, 2, 5)
+position = Vector2(3, 5)
+rest = Transform2D(1, 0, 0, 1, 3, 5)
 auto_calculate_length_and_angle = false
-length = 5.0
+length = 6.0
 bone_angle = 90.0
 
 [node name="LegRPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/LegR"]
-script = ExtResource("2_part")
-part_kind = "leg"
+script = ExtResource("2_art")
+texture_path = "res://assets/Taffi/PernaDir.png"
+target_size = Vector2(5, 6)
+pivot_fraction = Vector2(0.5, 0.1)
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(0, -24)
+position = Vector2(0, -20)
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0

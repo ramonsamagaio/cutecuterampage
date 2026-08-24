@@ -14,26 +14,21 @@ var current_boss: SugarBoss
 func _ready() -> void:
 	add_to_group("game")
 	_setup_vfx_environment()
-
 	streamer = ChunkStreamer.new()
 	streamer.name = "ChunkStreamer"
 	add_child(streamer)
-
 	blood = BloodSystem.new()
 	blood.name = "BloodSystem"
 	add_child(blood)
-
 	player = TAFFI_SCENE.instantiate() as TaffiController
 	player.name = "Taffi"
 	player.global_position = Vector2.ZERO
 	add_child(player)
 	streamer.player = player
-
 	director = EnemyDirector.new()
 	director.name = "EnemyDirector"
 	director.player = player
 	add_child(director)
-
 	hud = GameHUD.new()
 	hud.name = "HUD"
 	add_child(hud)
@@ -90,11 +85,14 @@ func spawn_projectile(origin: Vector2, direction: Vector2, damage_amount: float,
 	var projectile: CuteProjectile = CuteProjectile.new()
 	add_child(projectile)
 	projectile.configure(origin, direction, damage_amount, kind, pierce, speed)
+	if randf() < 0.42:
+		spawn_cute_fx(origin, "muzzle", direction, 0.75)
 
 func spawn_cupcake_mortar(origin: Vector2, target: Vector2, damage_amount: float, radius: float, evolved: bool) -> void:
 	var mortar: CupcakeMortar = CupcakeMortar.new()
 	add_child(mortar)
 	mortar.configure(origin, target, damage_amount, radius, evolved)
+	spawn_cute_fx(origin, "heart", origin.direction_to(target), 0.8)
 
 func explode_cupcake(center: Vector2, damage_amount: float, radius: float, evolved: bool) -> void:
 	var enemy_nodes: Array[Node] = []
@@ -109,6 +107,8 @@ func explode_cupcake(center: Vector2, damage_amount: float, radius: float, evolv
 			var falloff: float = lerpf(1.0, 0.58, clampf(distance / maxf(1.0, radius), 0.0, 1.0))
 			enemy.call("take_damage", damage_amount * falloff, center.direction_to(enemy.global_position), distance < radius * 0.35)
 	blood.emit_burst(center, Vector2.UP, 13 if evolved else 7)
+	spawn_cute_fx(center, "puff", Vector2.UP, 1.35 if evolved else 1.0)
+	spawn_cute_fx(center, "impact", Vector2.ZERO, 1.55 if evolved else 1.1)
 	if evolved:
 		for i: int in 10:
 			var angle: float = TAU * float(i) / 10.0
@@ -128,6 +128,65 @@ func spawn_enemy_projectile(origin: Vector2, direction: Vector2, damage_amount: 
 	add_child(projectile)
 	projectile.configure(origin, direction, damage_amount, speed)
 
+func spawn_cute_fx(global_pos: Vector2, kind: String, direction: Vector2 = Vector2.ZERO, size_multiplier: float = 1.0) -> void:
+	var active_fx_count: int = get_tree().get_nodes_in_group("cute_fx").size()
+	if active_fx_count >= 140:
+		return
+	var path: String = "res://assets/fx/BrilhoRosa.png"
+	var target_size: Vector2 = Vector2(12, 12)
+	var lifetime: float = 0.22
+	var drift: Vector2 = direction.normalized() * 28.0
+	var spin: float = randf_range(-2.5, 2.5)
+	var end_scale: float = 1.25
+	match kind:
+		"impact":
+			path = "res://assets/fx/ImpactoRosa.png"
+			target_size = Vector2(15, 15)
+			lifetime = 0.18
+			end_scale = 1.42
+		"crit":
+			path = "res://assets/fx/BrilhoDourado.png"
+			target_size = Vector2(19, 19)
+			lifetime = 0.28
+			end_scale = 1.55
+		"kill":
+			path = "res://assets/fx/PufffRosa.png"
+			target_size = Vector2(18, 18)
+			lifetime = 0.30
+			drift = Vector2(0, -16)
+			end_scale = 1.45
+		"heart":
+			path = "res://assets/fx/CoracaoAlado.png"
+			target_size = Vector2(15, 15)
+			lifetime = 0.42
+			drift = Vector2(randf_range(-15, 15), -34)
+		"strawberry":
+			path = "res://assets/fx/MorangoFull.png"
+			target_size = Vector2(14, 14)
+			lifetime = 0.46
+			drift = Vector2(randf_range(-26, 26), randf_range(-42, -18))
+		"powerup":
+			path = "res://assets/fx/CoracaoRosaMoldura.png"
+			target_size = Vector2(22, 22)
+			lifetime = 0.58
+			drift = Vector2(0, -24)
+			end_scale = 1.65
+		"puff":
+			path = "res://assets/fx/PufffRosa.png"
+			target_size = Vector2(22, 22)
+			lifetime = 0.32
+			drift = Vector2.ZERO
+			end_scale = 1.65
+		"muzzle":
+			path = "res://assets/fx/BrilhoRosa.png"
+			target_size = Vector2(10, 10)
+			lifetime = 0.12
+			drift = direction.normalized() * 18.0
+			end_scale = 1.28
+	var fx: CuteFX = CuteFX.new()
+	add_child(fx)
+	fx.configure(global_pos, path, target_size * size_multiplier, lifetime, drift, spin, 0.72, end_scale)
+
 func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -> void:
 	player.register_kill()
 	if hud != null:
@@ -136,6 +195,11 @@ func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -
 	orb.value = maxi(1, roundi(float(xp_value) * player.get_cute_xp_multiplier()))
 	orb.global_position = pos
 	add_child.call_deferred(orb)
+	spawn_cute_fx(pos, "kill", Vector2.UP, 1.15 if was_elite else 0.85)
+	if randf() < (0.38 if was_elite else 0.14):
+		spawn_cute_fx(pos + Vector2(randf_range(-8, 8), -5), "heart", Vector2.UP, 1.0)
+	if player.cute_meter >= 75.0 and randf() < 0.22:
+		spawn_cute_fx(pos + Vector2(randf_range(-10, 10), 0), "strawberry", Vector2.UP, 1.0)
 	if was_elite and randf() < 0.085:
 		spawn_reward_chest(pos, false)
 
@@ -155,6 +219,9 @@ func on_boss_defeated(pos: Vector2, defeated_name: String) -> void:
 	current_boss = null
 	player.cute_meter = minf(100.0, player.cute_meter + 28.0)
 	player.special_meter = minf(100.0, player.special_meter + 35.0)
+	spawn_cute_fx(pos, "crit", Vector2.ZERO, 2.5)
+	spawn_cute_fx(pos + Vector2(-24, -12), "heart", Vector2.UP, 1.8)
+	spawn_cute_fx(pos + Vector2(24, -6), "strawberry", Vector2.UP, 1.8)
 	spawn_reward_chest(pos, true)
 	if hud != null:
 		hud.show_reward_toast("%s POPPED!  EVOLUTION CHEST!" % defeated_name)
@@ -171,6 +238,8 @@ func claim_reward_chest(_pos: Vector2, legendary: bool) -> void:
 		reward_text = player.claim_evolution_chest()
 	else:
 		reward_text = player.claim_bonus_chest()
+	spawn_cute_fx(player.global_position + Vector2(0, -28), "powerup", Vector2.UP, 1.55 if legendary else 1.0)
+	spawn_cute_fx(player.global_position + Vector2(18, -18), "crit", Vector2.ZERO, 1.15 if legendary else 0.75)
 	if hud != null:
 		hud.show_reward_toast(reward_text)
 
@@ -191,14 +260,12 @@ func trigger_special(fallback_origin: Vector2) -> void:
 	var beam_origin: Vector2 = fallback_origin
 	if is_instance_valid(player.weapon_socket):
 		beam_origin = player.weapon_socket.global_position
-
 	var beam_direction: Vector2 = Vector2.RIGHT
 	var target: Node2D = get_nearest_enemy(player.global_position)
 	if is_instance_valid(target):
 		beam_direction = beam_origin.direction_to(target.global_position)
 	elif player.visual.scale.x < 0.0:
 		beam_direction = Vector2.LEFT
-
 	player.begin_special_channel()
 	var beam: TaffiStrawberryBeamVFX = TaffiStrawberryBeamVFX.new()
 	beam.name = "TaffiStrawberryOverdrive"
@@ -216,7 +283,6 @@ func _damage_strawberry_beam(origin: Vector2, beam_direction: Vector2) -> void:
 	var enemy_nodes: Array[Node] = []
 	for enemy_node: Node in get_tree().get_nodes_in_group("enemy"):
 		enemy_nodes.append(enemy_node)
-
 	for enemy_node: Node in enemy_nodes:
 		var enemy: Node2D = enemy_node as Node2D
 		if enemy == null or not is_instance_valid(enemy):

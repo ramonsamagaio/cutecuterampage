@@ -5,7 +5,7 @@ signal finished
 signal damage_tick(origin: Vector2, direction: Vector2)
 signal aim_changed(direction: Vector2)
 
-const BEAM_SHADER := preload("res://shaders/strawberry_beam.gdshader")
+const BEAM_SHADER: Shader = preload("res://shaders/strawberry_beam.gdshader")
 const LIFE: float = 4.25
 const BEAM_LENGTH: float = 1180.0
 const MUZZLE_X: float = 34.0
@@ -18,11 +18,13 @@ var _back_glow: Line2D
 var _body: Line2D
 var _core: Line2D
 var _spark_core: Line2D
+var _cannon_art: CutoutArtPart
 var _particles: Array[GPUParticles2D] = []
 var _damage_timer: float = 0.0
 
 func _ready() -> void:
 	z_index = 70
+	_build_cannon_art()
 	_build_beam_layers()
 	_build_particle_emitters()
 	queue_redraw()
@@ -42,26 +44,21 @@ func _process(delta: float) -> void:
 	if is_instance_valid(_source):
 		var source_pos: Vector2 = _source.global_position
 		global_position = Vector2(roundi(source_pos.x), roundi(source_pos.y))
-
 	_update_mouse_aim(delta)
 	age += delta
 	_damage_timer -= delta
-
 	var attack: float = smoothstep(0.0, 0.075, age)
 	var release: float = 1.0 - smoothstep(LIFE - 0.24, LIFE, age)
 	var envelope: float = attack * release
 	var throb: float = 1.0 + sin(age * 38.0) * 0.045
-
 	_back_glow.width = 112.0 * envelope * throb
 	_body.width = 72.0 * envelope * (1.0 + sin(age * 29.0) * 0.035)
 	_core.width = 31.0 * envelope
 	_spark_core.width = 9.0 * envelope * (1.0 + sin(age * 47.0) * 0.10)
-
 	if age >= 0.055:
 		while _damage_timer <= 0.0:
 			damage_tick.emit(global_position, direction)
 			_damage_timer += DAMAGE_TICK_INTERVAL
-
 	queue_redraw()
 	if age >= LIFE:
 		for emitter: GPUParticles2D in _particles:
@@ -81,6 +78,13 @@ func _update_mouse_aim(delta: float) -> void:
 	direction = Vector2.RIGHT.rotated(next_angle)
 	global_rotation = next_angle
 	aim_changed.emit(direction)
+
+func _build_cannon_art() -> void:
+	_cannon_art = CutoutArtPart.new()
+	_cannon_art.name = "StrawberryCannonArt"
+	_cannon_art.art_z_index = 6
+	_cannon_art.configure("res://assets/weapons/arma_waterjet.png", Vector2(116, 58), Vector2(0.77, 0.5))
+	add_child(_cannon_art)
 
 func _build_beam_layers() -> void:
 	_back_glow = _make_line("BackGlow", 112.0, Color(1.0, 0.10, 0.52, 0.24), 1.65, 1.9)
@@ -107,11 +111,13 @@ func _make_line(node_name: String, base_width: float, tint: Color, energy: float
 	return line
 
 func _build_particle_emitters() -> void:
-	_particles.append(_make_particles("Strawberries", "strawberry", 34, 0.82, 260.0, 520.0, 68.0))
-	_particles.append(_make_particles("Hearts", "heart", 48, 0.68, 340.0, 690.0, 82.0))
-	_particles.append(_make_particles("Stars", "star", 64, 0.54, 420.0, 820.0, 96.0))
+	_particles.append(_make_particles("Strawberries", "res://assets/fx/MorangoFull.png", Vector2i(16, 16), 34, 0.82, 260.0, 520.0, 68.0, 48.0))
+	_particles.append(_make_particles("StrawberrySlices", "res://assets/fx/MorangoHaf.png", Vector2i(12, 12), 22, 0.68, 320.0, 650.0, 76.0, 18.0))
+	_particles.append(_make_particles("Hearts", "res://assets/fx/CoracaoRosaCheio.png", Vector2i(12, 12), 46, 0.68, 340.0, 690.0, 82.0, 0.0))
+	_particles.append(_make_particles("Stars", "res://assets/fx/Estrela.png", Vector2i(10, 10), 58, 0.54, 420.0, 820.0, 96.0, 0.0))
+	_particles.append(_make_particles("PinkSparkles", "res://assets/fx/BrilhoRosa.png", Vector2i(9, 9), 36, 0.42, 450.0, 900.0, 105.0, 0.0))
 
-func _make_particles(node_name: String, kind: String, amount: int, lifetime: float, speed_min: float, speed_max: float, vertical_spread: float) -> GPUParticles2D:
+func _make_particles(node_name: String, texture_path: String, texture_size: Vector2i, amount: int, lifetime: float, speed_min: float, speed_max: float, vertical_spread: float, gravity_y: float) -> GPUParticles2D:
 	var particles: GPUParticles2D = GPUParticles2D.new()
 	particles.name = node_name
 	particles.amount = amount
@@ -123,9 +129,9 @@ func _make_particles(node_name: String, kind: String, amount: int, lifetime: flo
 	particles.interpolate = false
 	particles.local_coords = true
 	particles.position = Vector2((MUZZLE_X + BEAM_LENGTH) * 0.5, 0.0)
-	particles.texture = _make_pixel_texture(kind)
+	particles.texture = CutoutArtPart.make_small_texture(texture_path, texture_size)
+	particles.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	particles.self_modulate = Color(1.65, 1.15, 1.45, 1.0)
-
 	var process_material: ParticleProcessMaterial = ParticleProcessMaterial.new()
 	process_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
 	process_material.emission_box_extents = Vector3((BEAM_LENGTH - MUZZLE_X) * 0.48, vertical_spread, 0.0)
@@ -133,103 +139,17 @@ func _make_particles(node_name: String, kind: String, amount: int, lifetime: flo
 	process_material.spread = 17.0
 	process_material.initial_velocity_min = speed_min
 	process_material.initial_velocity_max = speed_max
-	process_material.gravity = Vector3(0.0, 48.0 if kind == "strawberry" else 0.0, 0.0)
-	process_material.scale_min = 1.0
-	process_material.scale_max = 1.75 if kind == "strawberry" else 1.4
+	process_material.gravity = Vector3(0.0, gravity_y, 0.0)
+	process_material.scale_min = 0.8
+	process_material.scale_max = 1.5
 	process_material.angular_velocity_min = -180.0
 	process_material.angular_velocity_max = 180.0
 	particles.process_material = process_material
 	add_child(particles)
 	return particles
 
-func _make_pixel_texture(kind: String) -> Texture2D:
-	var image: Image = Image.create(11, 11, false, Image.FORMAT_RGBA8)
-	image.fill(Color(0.0, 0.0, 0.0, 0.0))
-	match kind:
-		"strawberry": _paint_strawberry(image)
-		"star": _paint_star(image)
-		_: _paint_heart(image)
-	return ImageTexture.create_from_image(image)
-
-func _paint_heart(image: Image) -> void:
-	var pink: Color = Color("ff4f98")
-	var light: Color = Color("ffb2d0")
-	var dark: Color = Color("d72e70")
-	for y: int in range(2, 8):
-		for x: int in range(1, 10):
-			var dx: float = absf(float(x) - 5.0)
-			var inside: bool = (y <= 4 and ((x >= 1 and x <= 4) or (x >= 6 and x <= 9))) or (y >= 4 and dx <= float(8 - y))
-			if inside:
-				image.set_pixel(x, y, pink)
-	image.set_pixel(3, 2, light)
-	image.set_pixel(7, 2, light)
-	image.set_pixel(5, 8, dark)
-
-func _paint_star(image: Image) -> void:
-	var yellow: Color = Color("ffd84d")
-	var light: Color = Color("fff6b0")
-	var orange: Color = Color("f59a32")
-	for x: int in range(2, 9):
-		image.set_pixel(x, 5, yellow)
-	for y: int in range(2, 9):
-		image.set_pixel(5, y, yellow)
-	var star_pixels: Array[Vector2i] = [Vector2i(3, 3), Vector2i(7, 3), Vector2i(3, 7), Vector2i(7, 7), Vector2i(4, 4), Vector2i(6, 4), Vector2i(4, 6), Vector2i(6, 6)]
-	for p: Vector2i in star_pixels:
-		image.set_pixel(p.x, p.y, yellow)
-	image.set_pixel(5, 4, light)
-	image.set_pixel(5, 5, light)
-	image.set_pixel(5, 8, orange)
-
-func _paint_strawberry(image: Image) -> void:
-	var red: Color = Color("f2304f")
-	var hot: Color = Color("ff5670")
-	var dark: Color = Color("b51339")
-	var green: Color = Color("56a83f")
-	var seed_color: Color = Color("ffd65b")
-	for y: int in range(3, 9):
-		var half_width: int = 4 - maxi(0, y - 6)
-		for x: int in range(5 - half_width, 6 + half_width):
-			if x >= 0 and x < 11:
-				image.set_pixel(x, y, red)
-	var leaf_pixels: Array[Vector2i] = [Vector2i(3, 2), Vector2i(4, 1), Vector2i(5, 2), Vector2i(6, 1), Vector2i(7, 2)]
-	for p: Vector2i in leaf_pixels:
-		image.set_pixel(p.x, p.y, green)
-	image.set_pixel(4, 4, hot)
-	image.set_pixel(4, 5, Color.WHITE)
-	var seed_pixels: Array[Vector2i] = [Vector2i(3, 6), Vector2i(6, 5), Vector2i(7, 7), Vector2i(5, 8)]
-	for p: Vector2i in seed_pixels:
-		image.set_pixel(p.x, p.y, seed_color)
-	image.set_pixel(5, 9, dark)
-
 func _draw() -> void:
 	var envelope: float = smoothstep(0.0, 0.075, age) * (1.0 - smoothstep(LIFE - 0.24, LIFE, age))
-	var ink: Color = Color("28152e")
-	var pink: Color = Color("f64c96")
-	var hot: Color = Color("d92f76")
-	var pale: Color = Color("ffe8f2")
-	var red: Color = Color("f03450")
-	var green: Color = Color("60ad45")
-
-	draw_rect(Rect2(-104, -25, 137, 50), ink)
-	draw_rect(Rect2(-99, -21, 127, 42), pink)
-	draw_rect(Rect2(-84, -17, 54, 34), pale)
-	draw_rect(Rect2(-24, -20, 17, 40), hot)
-	draw_rect(Rect2(0, -23, 30, 46), hot)
-	draw_rect(Rect2(-74, 20, 22, 35), ink)
-	draw_rect(Rect2(-70, 20, 16, 30), pink)
-
-	draw_rect(Rect2(-62, -8, 9, 8), red)
-	draw_rect(Rect2(-48, -8, 9, 8), red)
-	draw_rect(Rect2(-66, -3, 31, 8), red)
-	draw_rect(Rect2(-61, 5, 21, 6), red)
-	draw_rect(Rect2(-55, 11, 10, 5), red)
-
-	draw_rect(Rect2(16, -16, 15, 31), red)
-	draw_rect(Rect2(12, -11, 23, 20), red)
-	draw_rect(Rect2(15, -21, 6, 8), green)
-	draw_rect(Rect2(22, -22, 6, 9), green)
-	draw_rect(Rect2(28, -19, 6, 7), green)
-
 	var flare: float = (18.0 + sin(age * 44.0) * 5.0) * envelope
 	if flare > 0.5:
 		draw_circle(Vector2(MUZZLE_X, 0.0), flare, Color(2.2, 0.35, 1.25, 0.32))

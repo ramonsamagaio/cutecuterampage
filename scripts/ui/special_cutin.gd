@@ -3,16 +3,25 @@ extends Control
 
 signal finished
 
-var active := false
-var elapsed := 0.0
-const DURATION := 0.88
+const DURATION: float = 0.88
+
+var active: bool = false
+var elapsed: float = 0.0
 var title_label: Label
+var _head_texture: Texture2D
+var _ear1_texture: Texture2D
+var _ear2_texture: Texture2D
+var _bow_texture: Texture2D
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
+	_head_texture = CutoutArtPart.make_small_texture("res://assets/Taffi/Cabeca.png", Vector2i(230, 190))
+	_ear1_texture = CutoutArtPart.make_small_texture("res://assets/Taffi/Ore1.png", Vector2i(72, 155))
+	_ear2_texture = CutoutArtPart.make_small_texture("res://assets/Taffi/Ore2.png", Vector2i(72, 155))
+	_bow_texture = CutoutArtPart.make_small_texture("res://assets/Taffi/Laco.png", Vector2i(105, 82))
 	title_label = Label.new()
 	title_label.text = "TAFFI ♡ STRAWBERRY OVERDRIVE!"
 	title_label.position = Vector2(515, 458)
@@ -40,34 +49,28 @@ func _process(delta: float) -> void:
 		get_tree().paused = false
 		finished.emit()
 
+func _draw_texture_centered(texture: Texture2D, center: Vector2, scale_factor: float = 1.0) -> void:
+	if texture == null:
+		return
+	var draw_size: Vector2 = texture.get_size() * scale_factor
+	draw_texture_rect(texture, Rect2(center - draw_size * 0.5, draw_size), false)
+
 func _draw() -> void:
-	var w := size.x
-	var h := size.y
+	var w: float = size.x
+	var h: float = size.y
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.02, 0.08, 0.88))
-	var center := Vector2(w * 0.5, h * 0.5)
-	var panel := Rect2(w * 0.12, h * 0.25, w * 0.76, h * 0.48)
+	var center: Vector2 = Vector2(w * 0.5, h * 0.5)
+	var panel: Rect2 = Rect2(w * 0.12, h * 0.25, w * 0.76, h * 0.48)
 	draw_rect(panel, Color("f04b91"))
 	draw_rect(panel.grow(-8), Color("ffb6d2"))
-	# Anime action lines, deterministic and chunky.
-	for i in 22:
-		var a := TAU * float(i) / 22.0
-		var start := center + Vector2.RIGHT.rotated(a) * 390.0
-		var finish := center + Vector2.RIGHT.rotated(a) * 175.0
+	for i: int in 22:
+		var a: float = TAU * float(i) / 22.0
+		var start: Vector2 = center + Vector2.RIGHT.rotated(a) * 390.0
+		var finish: Vector2 = center + Vector2.RIGHT.rotated(a) * 175.0
 		draw_line(start, finish, Color("fff6fa"), 5.0)
-	# Pixel-art Taffi face in the middle of the cut-in.
-	var pulse := 1.0 + sin(elapsed * 18.0) * 0.035
-	var face_center := center + Vector2(-190, -5)
-	var face_size := Vector2(220, 170) * pulse
-	var face := Rect2(face_center - face_size * 0.5, face_size)
-	draw_rect(face, Color("fff7f4"))
-	draw_rect(Rect2(face.position + Vector2(25, -105), Vector2(45, 120)), Color("fff7f4"))
-	draw_rect(Rect2(face.position + Vector2(145, -105), Vector2(45, 120)), Color("fff7f4"))
-	draw_rect(Rect2(face.position + Vector2(38, -80), Vector2(18, 70)), Color("ff8eb6"))
-	draw_rect(Rect2(face.position + Vector2(157, -80), Vector2(18, 70)), Color("ff8eb6"))
-	draw_rect(Rect2(face.position + Vector2(54, 60), Vector2(24, 28)), Color("17131d"))
-	draw_rect(Rect2(face.position + Vector2(142, 60), Vector2(24, 28)), Color("17131d"))
-	draw_rect(Rect2(face.position + Vector2(34, 98), Vector2(34, 18)), Color("ff8fb2"))
-	draw_rect(Rect2(face.position + Vector2(153, 98), Vector2(34, 18)), Color("ff8fb2"))
-	# Bow.
-	draw_rect(Rect2(face.position + Vector2(7, 5), Vector2(50, 45)), Color("ff4d95"))
-	draw_rect(Rect2(face.position + Vector2(58, 13), Vector2(32, 28)), Color("e93178"))
+	var pulse: float = 1.0 + sin(elapsed * 18.0) * 0.035
+	var face_center: Vector2 = center + Vector2(-190, 0)
+	_draw_texture_centered(_ear1_texture, face_center + Vector2(-55, -126), pulse)
+	_draw_texture_centered(_ear2_texture, face_center + Vector2(55, -126), pulse)
+	_draw_texture_centered(_head_texture, face_center + Vector2(0, 0), pulse)
+	_draw_texture_centered(_bow_texture, face_center + Vector2(-76, -76), pulse)

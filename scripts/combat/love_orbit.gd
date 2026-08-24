@@ -6,6 +6,12 @@ var orbit_level: int = 1
 var evolved: bool = false
 var _angle: float = 0.0
 var _tick_timer: float = 0.0
+var _normal_texture: Texture2D
+var _evolved_texture: Texture2D
+
+func _ready() -> void:
+	_normal_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoRosaMoldura.png", Vector2i(12, 12))
+	_evolved_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoAlado.png", Vector2i(17, 17))
 
 func configure(player: TaffiController, level_value: int, is_evolved: bool) -> void:
 	owner_player = player
@@ -57,19 +63,11 @@ func _orbit_radius() -> float:
 func _draw() -> void:
 	var count: int = _orb_count()
 	var radius: float = _orbit_radius()
+	var texture: Texture2D = _evolved_texture if evolved else _normal_texture
+	if texture == null:
+		return
+	var texture_size: Vector2 = texture.get_size()
 	for i: int in count:
 		var phase: float = _angle + TAU * float(i) / float(count)
 		var p: Vector2 = Vector2.RIGHT.rotated(phase) * radius
-		_draw_heart(p, evolved)
-
-func _draw_heart(p: Vector2, big: bool) -> void:
-	var scale_px: float = 1.35 if big else 1.0
-	var hot: Color = Color("ff4d91")
-	var pale: Color = Color("ffd1e3")
-	var dark: Color = Color("bd2d66")
-	draw_rect(Rect2(p + Vector2(-5, -3) * scale_px, Vector2(4, 4) * scale_px), hot)
-	draw_rect(Rect2(p + Vector2(1, -3) * scale_px, Vector2(4, 4) * scale_px), hot)
-	draw_rect(Rect2(p + Vector2(-6, 0) * scale_px, Vector2(12, 4) * scale_px), hot)
-	draw_rect(Rect2(p + Vector2(-4, 4) * scale_px, Vector2(8, 3) * scale_px), dark)
-	draw_rect(Rect2(p + Vector2(-1, 7) * scale_px, Vector2(2, 2) * scale_px), dark)
-	draw_rect(Rect2(p + Vector2(-3, -2) * scale_px, Vector2(2, 2) * scale_px), pale)
+		draw_texture(texture, p - texture_size * 0.5)
