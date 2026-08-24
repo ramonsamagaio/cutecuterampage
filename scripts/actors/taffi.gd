@@ -21,7 +21,6 @@ var special_channeling: bool = false
 var damage_taken_multiplier: float = 1.0
 var special_charge_multiplier: float = 1.0
 
-# Weapon progression. These stay independent so a run can become a real build.
 var heart_level: int = 1
 var cupcake_level: int = 0
 var orbit_level: int = 0
@@ -29,7 +28,6 @@ var heart_evolved: bool = false
 var cupcake_evolved: bool = false
 var orbit_evolved: bool = false
 
-# Cute Meter is a risk/reward layer: carnage raises it, getting hit cuts it.
 var cute_meter: float = 0.0
 var _cute_decay_delay: float = 0.0
 
@@ -237,7 +235,8 @@ func _xp_required(level_value: int) -> int:
 	return 4 + roundi(scaled)
 
 func apply_upgrade(id: String) -> void:
-	_upgrade_levels[id] = _upgrade_levels.get(id, 0) + 1
+	var previous_level: int = int(_upgrade_levels.get(id, 0))
+	_upgrade_levels[id] = previous_level + 1
 	match id:
 		"sugar_rush": fire_interval = maxf(0.09, fire_interval * 0.82)
 		"heart_piercer":
@@ -292,6 +291,32 @@ func claim_evolution_chest() -> String:
 	special_charge_multiplier += 0.12
 	return "SUPER SUGAR CACHE!  POWER UP!"
 
+func claim_bonus_chest() -> String:
+	var pool: Array[String] = ["sugar_rush", "heart_piercer", "bubblegum_shoes", "strawberry_core", "sprinkles", "ribbon_reflex", "plush_armor", "love_battery", "cupcake_mortar", "love_orbit"]
+	var available: Array[String] = []
+	for upgrade_id: String in pool:
+		if can_take_upgrade(upgrade_id):
+			available.append(upgrade_id)
+	if available.is_empty():
+		damage += 3.0
+		hp = minf(max_hp, hp + 18.0)
+		return "SUGAR CACHE!  +POWER"
+	var picked: String = available[randi_range(0, available.size() - 1)]
+	apply_upgrade(picked)
+	var names: Dictionary[String, String] = {
+		"sugar_rush": "SUGAR RUSH",
+		"heart_piercer": "HEART PIERCER",
+		"bubblegum_shoes": "BUBBLEGUM SHOES",
+		"strawberry_core": "STRAWBERRY CORE",
+		"sprinkles": "SPRINKLES",
+		"ribbon_reflex": "RIBBON REFLEX",
+		"plush_armor": "PLUSH ARMOR",
+		"love_battery": "LOVE BATTERY",
+		"cupcake_mortar": "CUPCAKE MORTAR",
+		"love_orbit": "LOVE ORBIT"
+	}
+	return "CHEST!  %s +1" % names[picked]
+
 func register_kill() -> void:
 	combo += 1
 	combo_timer = 2.3
@@ -331,9 +356,11 @@ func get_weapon_summary() -> String:
 	var heart_name: String = "HEARTSTORM" if heart_evolved else "HEART BLASTER"
 	var summary: String = "%s %d" % [heart_name, heart_level]
 	if cupcake_level > 0:
-		summary += "   •   %s %d" % [("BIRTHDAY MASSACRE" if cupcake_evolved else "CUPCAKE"), cupcake_level]
+		var cupcake_name: String = "BIRTHDAY MASSACRE" if cupcake_evolved else "CUPCAKE"
+		summary += "   •   %s %d" % [cupcake_name, cupcake_level]
 	if orbit_level > 0:
-		summary += "   •   %s %d" % [("HALO OF HUGS" if orbit_evolved else "LOVE ORBIT"), orbit_level]
+		var orbit_name: String = "HALO OF HUGS" if orbit_evolved else "LOVE ORBIT"
+		summary += "   •   %s %d" % [orbit_name, orbit_level]
 	return summary
 
 func is_dashing() -> bool:
