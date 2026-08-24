@@ -1,40 +1,45 @@
 class_name GameHUD
 extends CanvasLayer
 
-var player
-var game
+var player: TaffiController
+var game: Node
 var hp_bar: ProgressBar
 var xp_bar: ProgressBar
 var special_bar: ProgressBar
 var level_label: Label
 var combo_label: Label
 var kill_label: Label
+var danger_label: Label
+var special_status_label: Label
 var special_button: Button
 var cutin: SpecialCutin
 var level_panel: Panel
 var level_box: VBoxContainer
-var kills := 0
-var _upgrade_ids := ["sugar_rush", "heart_piercer", "bubblegum_shoes", "strawberry_core", "sprinkles"]
-var _upgrade_names := {
+var kills: int = 0
+var _upgrade_ids: Array[String] = ["sugar_rush", "heart_piercer", "bubblegum_shoes", "strawberry_core", "sprinkles", "ribbon_reflex", "plush_armor", "love_battery"]
+var _upgrade_names: Dictionary[String, String] = {
 	"sugar_rush": "SUGAR RUSH!  Fire faster",
 	"heart_piercer": "HEART PIERCER  +Damage",
 	"bubblegum_shoes": "BUBBLEGUM SHOES  +Speed",
 	"strawberry_core": "STRAWBERRY CORE  +HP",
-	"sprinkles": "SPRINKLES!  +Projectile"
+	"sprinkles": "SPRINKLES!  +Projectile",
+	"ribbon_reflex": "RIBBON REFLEX  Faster dash",
+	"plush_armor": "PLUSH ARMOR  Less damage",
+	"love_battery": "LOVE BATTERY  Faster Special"
 }
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 
-func bind(p, g) -> void:
+func bind(p: TaffiController, g: Node) -> void:
 	player = p
 	game = g
 	player.level_up_requested.connect(_show_level_up)
 	player.special_requested.connect(request_special)
 
 func _build_ui() -> void:
-	var root := Control.new()
+	var root: Control = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 
@@ -49,6 +54,13 @@ func _build_ui() -> void:
 	level_label.position = Vector2(24, 72)
 	level_label.add_theme_font_size_override("font_size", 18)
 	root.add_child(level_label)
+
+	danger_label = Label.new()
+	danger_label.position = Vector2(24, 100)
+	danger_label.add_theme_font_size_override("font_size", 17)
+	danger_label.add_theme_color_override("font_color", Color("ff8ba9"))
+	root.add_child(danger_label)
+
 	combo_label = Label.new()
 	combo_label.position = Vector2(500, 38)
 	combo_label.size = Vector2(360, 60)
@@ -56,10 +68,19 @@ func _build_ui() -> void:
 	combo_label.add_theme_font_size_override("font_size", 30)
 	combo_label.add_theme_color_override("font_color", Color("ff8fbd"))
 	root.add_child(combo_label)
+
 	kill_label = Label.new()
 	kill_label.position = Vector2(1090, 24)
 	kill_label.add_theme_font_size_override("font_size", 18)
 	root.add_child(kill_label)
+
+	special_status_label = Label.new()
+	special_status_label.position = Vector2(955, 582)
+	special_status_label.size = Vector2(292, 24)
+	special_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	special_status_label.add_theme_font_size_override("font_size", 15)
+	special_status_label.add_theme_color_override("font_color", Color("ffd8e8"))
+	root.add_child(special_status_label)
 
 	special_button = Button.new()
 	special_button.text = "SPECIAL ♡"
@@ -83,24 +104,24 @@ func _build_ui() -> void:
 	level_panel.add_child(level_box)
 
 func _make_bar(pos: Vector2, bar_size: Vector2, fill_color: Color) -> ProgressBar:
-	var bar := ProgressBar.new()
+	var bar: ProgressBar = ProgressBar.new()
 	bar.position = pos
 	bar.size = bar_size
 	bar.show_percentage = false
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color("31182b")
-	bg.corner_radius_top_left = 5
-	bg.corner_radius_top_right = 5
-	bg.corner_radius_bottom_left = 5
-	bg.corner_radius_bottom_right = 5
-	var fill := StyleBoxFlat.new()
-	fill.bg_color = fill_color
-	fill.corner_radius_top_left = 5
-	fill.corner_radius_top_right = 5
-	fill.corner_radius_bottom_left = 5
-	fill.corner_radius_bottom_right = 5
-	bar.add_theme_stylebox_override("background", bg)
-	bar.add_theme_stylebox_override("fill", fill)
+	var background_box: StyleBoxFlat = StyleBoxFlat.new()
+	background_box.bg_color = Color("31182b")
+	background_box.corner_radius_top_left = 5
+	background_box.corner_radius_top_right = 5
+	background_box.corner_radius_bottom_left = 5
+	background_box.corner_radius_bottom_right = 5
+	var fill_box: StyleBoxFlat = StyleBoxFlat.new()
+	fill_box.bg_color = fill_color
+	fill_box.corner_radius_top_left = 5
+	fill_box.corner_radius_top_right = 5
+	fill_box.corner_radius_bottom_left = 5
+	fill_box.corner_radius_bottom_right = 5
+	bar.add_theme_stylebox_override("background", background_box)
+	bar.add_theme_stylebox_override("fill", fill_box)
 	return bar
 
 func _process(_delta: float) -> void:
@@ -115,6 +136,12 @@ func _process(_delta: float) -> void:
 	level_label.text = "LV %d   HP %d/%d" % [player.level, roundi(player.hp), roundi(player.max_hp)]
 	combo_label.text = "%s\nCOMBO x%d" % [player.get_combo_caption(), player.combo] if player.combo > 0 else ""
 	kill_label.text = "♡ %d" % kills
+	var threat: int = int(game.call("get_threat_tier")) if game != null else 1
+	var run_time: float = float(game.call("get_run_time")) if game != null else 0.0
+	var minutes: int = floori(run_time / 60.0)
+	var seconds: int = floori(fmod(run_time, 60.0))
+	danger_label.text = "DANGER %02d   %02d:%02d" % [threat, minutes, seconds]
+	special_status_label.text = "AIM WITH MOUSE • STRAWBERRY BEAM" if player.special_channeling else "STRAWBERRY OVERDRIVE"
 	special_button.disabled = not player.can_special() or get_tree().paused
 
 func on_kill() -> void:
@@ -126,24 +153,28 @@ func request_special() -> void:
 	cutin.play()
 	await cutin.finished
 	player.consume_special()
-	game.trigger_special(player.global_position)
+	game.call("trigger_special", player.global_position)
 
 func _show_level_up() -> void:
 	if player == null:
 		return
 	get_tree().paused = true
 	level_panel.visible = true
-	for child in level_box.get_children():
+	for child: Node in level_box.get_children():
 		child.queue_free()
-	var title := Label.new()
+	var title: Label = Label.new()
 	title.text = "LEVEL UP! ♡ Pick your sugar"
 	title.add_theme_font_size_override("font_size", 24)
 	level_box.add_child(title)
-	var choices := _upgrade_ids.duplicate()
+	var choices: Array[String] = []
+	for upgrade_id: String in _upgrade_ids:
+		if player.can_take_upgrade(upgrade_id):
+			choices.append(upgrade_id)
 	choices.shuffle()
-	for i in 3:
+	var option_count: int = mini(3, choices.size())
+	for i: int in option_count:
 		var id: String = choices[i]
-		var button := Button.new()
+		var button: Button = Button.new()
 		button.text = _upgrade_names[id]
 		button.custom_minimum_size = Vector2(440, 58)
 		button.pressed.connect(_pick_upgrade.bind(id))
