@@ -4,6 +4,7 @@ extends CharacterBody2D
 var enemy_kind: String = "chick"
 var archetype: String = "chaser"
 var elite: bool = false
+var elite_affix: String = ""
 var power_scale: float = 1.0
 var max_health: float = 12.0
 var health: float = 12.0
@@ -64,10 +65,29 @@ func _ready() -> void:
 		move_speed *= 1.12
 		contact_damage *= 1.45
 		xp_reward *= 3
+		_apply_elite_affix()
 	health = max_health
 	visual.modulate = _base_modulate
 	_strafe_sign = -1.0 if randf() < 0.5 else 1.0
 	_build_parts()
+
+func _apply_elite_affix() -> void:
+	match elite_affix:
+		"swift":
+			move_speed *= 1.42
+			max_health *= 0.86
+			_base_modulate = Color(0.72, 1.0, 0.92, 1.0)
+		"tank":
+			max_health *= 1.72
+			move_speed *= 0.78
+			contact_damage *= 1.18
+			visual.scale *= 1.18
+			_base_modulate = Color(1.0, 0.82, 0.62, 1.0)
+		"volatile":
+			contact_damage *= 1.24
+			_base_modulate = Color(1.0, 0.70, 0.88, 1.0)
+		_:
+			_base_modulate = Color(1.0, 0.88, 0.96, 1.0)
 
 func _build_parts() -> void:
 	var head: PixelPart = PixelPart.new()
@@ -164,12 +184,18 @@ func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critic
 func _die(hit_direction: Vector2) -> void:
 	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
 	if blood_node != null:
-		blood_node.call("emit_burst", global_position, hit_direction, 16 if elite else 11)
+		blood_node.call("emit_burst", global_position, hit_direction, 20 if elite else 11)
 		var tint: Color = Color("ffcf4d") if enemy_kind == "chick" else Color("ff9fbd")
 		blood_node.call("spawn_chunk", global_position + Vector2(0, -8), "head", tint, hit_direction)
 		blood_node.call("spawn_chunk", global_position, "body", tint, hit_direction.rotated(0.6))
 		blood_node.call("spawn_chunk", global_position + Vector2(0, 8), "leg", tint, hit_direction.rotated(-0.6))
-	var game_node: Node = get_tree().get_first_node_in_group("game")
-	if game_node != null:
-		game_node.call("on_enemy_killed", global_position, xp_reward)
+	if elite and elite_affix == "volatile":
+		var game_node: Node = get_tree().get_first_node_in_group("game")
+		if game_node != null:
+			for i: int in 10:
+				var angle: float = TAU * float(i) / 10.0
+				game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(angle), contact_damage * 0.42, 220.0)
+	var game: Node = get_tree().get_first_node_in_group("game")
+	if game != null:
+		game.call("on_enemy_killed", global_position, xp_reward, elite)
 	queue_free()
