@@ -2,17 +2,19 @@
 
 This pass intentionally uses the large separated source graphics already committed under `assets/` instead of waiting for final hand-cleaned pixel art.
 
-## Runtime pixel treatment
+## Runtime treatment
 
-`CutoutArtPart` trims transparent margins, downsamples the visible source graphic with nearest-neighbor sampling to a deliberately tiny target size, caches the resulting texture and renders with nearest filtering. The source PNGs stay untouched. This makes the current large artwork read much closer to real pixel art in-game while remaining disposable/provisional.
+The separated Taffi/chicken/pig PNGs are registered exports: every body-part layer belonging to a character keeps the same transparent source canvas. When those images are superimposed at the same origin, they assemble exactly as authored in Photoshop.
+
+The runtime now preserves that registration. `CutoutArtPart` loads the original PNG, never crops its transparent margins and never bakes/downsamples its pixels. It only scales the Sprite2D with nearest filtering. Taffi's Bone2D child art uses inverse rest-chain offsets so every registered canvas overlaps correctly at rest while the skeleton can still animate. Enemy layers stay on the same origin and use tiny pixel-like translations plus whole-body bounce.
 
 ## Taffi
 
-The placeholder geometry in the Skeleton2D has been replaced with the separated Taffi graphics: head, body, two ears, bow, back hand, weapon arm and two legs. The existing mathematical hop/bounce rig still drives them. The held weapon is now art-driven too: Heart gun normally, Star gun when Love Orbit is active, Bow after Heartstorm evolution, Cupcake launcher briefly when the mortar fires, and Waterjet art for Strawberry Overdrive.
+The Skeleton2D uses the separated Taffi graphics: head, body, two ears, bow, back hand, weapon arm and two legs. Every Taffi layer uses the same registered display canvas. The held weapon is art-driven too: Heart gun normally, Star gun when Love Orbit is active, Bow after Heartstorm evolution, Cupcake launcher briefly when the mortar fires, and Waterjet art for Strawberry Overdrive.
 
 ## Enemies and gore
 
-Chick and pig placeholders now assemble from the separated enemy graphics. Their limbs bob/swing while moving. Hits add persistent blood marks directly to the individual cutout pieces. Death now throws several of the real visible body-part graphics as spinning, blood-stained chunks instead of only generic rectangles, while retaining the bounded pixel-blood ground splat system.
+Chicken and pig are assembled from their registered separated graphics. Hits add blood marks to individual cutout pieces. Death throws several real body-part graphics as spinning blood-stained chunks while retaining the bounded pixel-blood ground splat system.
 
 ## FX mapping
 
@@ -26,4 +28,4 @@ Chick and pig placeholders now assemble from the separated enemy graphics. Their
 - `Estrela` — evolved cupcake star ring and beam stars
 - `MorangoFull`, `MorangoHaf` — high-Cute kill accents and Strawberry Overdrive debris
 
-The Strawberry Overdrive keeps the shader/glow beam but now uses the uploaded Waterjet weapon graphic as its provisional giant cannon and the uploaded FX graphics as GPU particle textures.
+FX and particle textures are also kept as original PNGs. Their displayed size is controlled by node/particle scale instead of generating smaller image copies.
