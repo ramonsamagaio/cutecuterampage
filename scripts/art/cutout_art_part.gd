@@ -4,7 +4,7 @@ extends Node2D
 static var _texture_cache: Dictionary[String, Texture2D] = {}
 
 @export_file("*.png") var texture_path: String = ""
-@export var target_size: Vector2 = Vector2(12.0, 12.0)
+@export var target_size: Vector2 = Vector2(32.0, 32.0)
 @export var pivot_fraction: Vector2 = Vector2(0.5, 0.5)
 @export var art_modulate: Color = Color.WHITE
 @export var art_z_index: int = 0
@@ -12,34 +12,21 @@ static var _texture_cache: Dictionary[String, Texture2D] = {}
 var sprite: Sprite2D
 var blood_stains: Array[Vector2] = []
 
-static func make_small_texture(path: String, max_size: Vector2i) -> Texture2D:
+static func load_original_texture(path: String) -> Texture2D:
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
-	var safe_size: Vector2i = Vector2i(maxi(1, max_size.x), maxi(1, max_size.y))
-	var cache_key: String = "%s@%dx%d" % [path, safe_size.x, safe_size.y]
-	var cached_value: Variant = _texture_cache.get(cache_key, null)
+	var cached_value: Variant = _texture_cache.get(path, null)
 	if cached_value is Texture2D:
 		return cached_value as Texture2D
-
 	var source_texture: Texture2D = load(path) as Texture2D
-	if source_texture == null:
-		return null
-	var source_image: Image = source_texture.get_image()
-	if source_image == null or source_image.is_empty():
-		return source_texture
-	var used_rect: Rect2i = source_image.get_used_rect()
-	if used_rect.size.x <= 0 or used_rect.size.y <= 0:
-		return source_texture
-	var cropped: Image = source_image.get_region(used_rect)
-	var ratio_x: float = float(safe_size.x) / float(maxi(1, cropped.get_width()))
-	var ratio_y: float = float(safe_size.y) / float(maxi(1, cropped.get_height()))
-	var ratio: float = minf(ratio_x, ratio_y)
-	var baked_width: int = maxi(1, roundi(float(cropped.get_width()) * ratio))
-	var baked_height: int = maxi(1, roundi(float(cropped.get_height()) * ratio))
-	cropped.resize(baked_width, baked_height, Image.INTERPOLATE_NEAREST)
-	var baked_texture: ImageTexture = ImageTexture.create_from_image(cropped)
-	_texture_cache[cache_key] = baked_texture
-	return baked_texture
+	if source_texture != null:
+		_texture_cache[path] = source_texture
+	return source_texture
+
+# Kept for old call sites. It intentionally does NOT bake, crop or resize anymore.
+# `max_size` is ignored; callers that need a display size should scale the node/quad.
+static func make_small_texture(path: String, _max_size: Vector2i) -> Texture2D:
+	return load_original_texture(path)
 
 func _ready() -> void:
 	_rebuild()
@@ -63,19 +50,28 @@ func _ensure_sprite() -> void:
 
 func _rebuild() -> void:
 	_ensure_sprite()
-	var requested_size: Vector2i = Vector2i(maxi(1, roundi(target_size.x)), maxi(1, roundi(target_size.y)))
-	var baked_texture: Texture2D = make_small_texture(texture_path, requested_size)
-	sprite.texture = baked_texture
+	var original_texture: Texture2D = load_original_texture(texture_path)
+	sprite.texture = original_texture
 	sprite.modulate = art_modulate
 	sprite.z_index = art_z_index
-	if baked_texture == null:
+	if original_texture == null:
 		sprite.visible = false
 		return
 	sprite.visible = true
-	var texture_size: Vector2 = baked_texture.get_size()
+
+	# Important: preserve the complete transparent source canvas. This is what keeps
+	# all Photoshop-exported body parts registered to each other. Only Sprite2D scale
+	# changes; the PNG itself is never cropped or resampled.
+	var source_size: Vector2 = original_texture.get_size()
+	var fit: float = RegisteredTextureMath.fit_scale(original_texture, target_size)
+	sprite.scale = Vector2.ONE * fit
+
+	# Optional anchor adjustment for standalone graphics such as weapons. Character
+	# body layers use pivot_fraction = (0.5, 0.5), so their registered canvases remain
+	# perfectly superimposed.
 	sprite.offset = Vector2(
-		(0.5 - pivot_fraction.x) * texture_size.x,
-		(0.5 - pivot_fraction.y) * texture_size.y
+		(0.5 - pivot_fraction.x) * source_size.x,
+		(0.5 - pivot_fraction.y) * source_size.y
 	)
 
 func add_blood_stain(local_pos: Vector2 = Vector2.ZERO) -> void:
@@ -86,8 +82,8 @@ func add_blood_stain(local_pos: Vector2 = Vector2.ZERO) -> void:
 
 func add_random_blood_stain(amount: int = 1) -> void:
 	for _i: int in maxi(1, amount):
-		var x_limit: float = maxf(2.0, target_size.x * 0.34)
-		var y_limit: float = maxf(2.0, target_size.y * 0.30)
+		var x_limit: float = maxf(2.0, target_size.x * 0.24)
+		var y_limit: float = maxf(2.0, target_size.y * 0.24)
 		add_blood_stain(Vector2(randf_range(-x_limit, x_limit), randf_range(-y_limit, y_limit)))
 
 func _draw() -> void:
