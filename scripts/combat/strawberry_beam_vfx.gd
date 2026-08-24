@@ -10,6 +10,7 @@ const MUZZLE_X := 34.0
 
 var age := 0.0
 var direction := Vector2.RIGHT
+var _source: Node2D
 var _back_glow: Line2D
 var _body: Line2D
 var _core: Line2D
@@ -22,17 +23,22 @@ func _ready() -> void:
 	_build_particle_emitters()
 	queue_redraw()
 
-func configure(origin: Vector2, fire_direction: Vector2) -> void:
+func configure(origin: Vector2, fire_direction: Vector2, source_node: Node2D = null) -> void:
+	_source = source_node
 	global_position = Vector2(roundi(origin.x), roundi(origin.y))
 	direction = fire_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = Vector2.RIGHT
-	rotation = direction.angle()
+	global_rotation = direction.angle()
 	for emitter in _particles:
 		emitter.restart()
 		emitter.emitting = true
 
 func _process(delta: float) -> void:
+	if is_instance_valid(_source):
+		var source_pos := _source.global_position
+		global_position = Vector2(roundi(source_pos.x), roundi(source_pos.y))
+
 	age += delta
 	var attack := smoothstep(0.0, 0.075, age)
 	var release := 1.0 - smoothstep(LIFE - 0.20, LIFE, age)
@@ -141,7 +147,7 @@ func _paint_star(image: Image) -> void:
 	for y in range(2, 9):
 		image.set_pixel(5, y, yellow)
 	for p in [Vector2i(3, 3), Vector2i(7, 3), Vector2i(3, 7), Vector2i(7, 7), Vector2i(4, 4), Vector2i(6, 4), Vector2i(4, 6), Vector2i(6, 6)]:
-		image.set_pixelv(p, yellow)
+		image.set_pixel(p.x, p.y, yellow)
 	image.set_pixel(5, 4, light)
 	image.set_pixel(5, 5, light)
 	image.set_pixel(5, 8, orange)
@@ -158,11 +164,11 @@ func _paint_strawberry(image: Image) -> void:
 			if x >= 0 and x < 11:
 				image.set_pixel(x, y, red)
 	for p in [Vector2i(3, 2), Vector2i(4, 1), Vector2i(5, 2), Vector2i(6, 1), Vector2i(7, 2)]:
-		image.set_pixelv(p, green)
+		image.set_pixel(p.x, p.y, green)
 	image.set_pixel(4, 4, hot)
 	image.set_pixel(4, 5, Color.WHITE)
 	for p in [Vector2i(3, 6), Vector2i(6, 5), Vector2i(7, 7), Vector2i(5, 8)]:
-		image.set_pixelv(p, seed)
+		image.set_pixel(p.x, p.y, seed)
 	image.set_pixel(5, 9, dark)
 
 func _draw() -> void:
