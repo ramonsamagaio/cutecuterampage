@@ -31,8 +31,10 @@ Taffi auto-fires at the nearest enemy for now so the first slice can focus on mo
 - dismembered head/body/leg chunks carrying blood stains
 - CUTE / KAWAII / SUGAR RUSH / STRAWBERRY JUICE combo language
 - Special meter charged by kills
-- anime-style Taffi cut-in that pauses the game, fills the screen with action lines, resumes, then detonates a candy/gore screen clear
+- anime-style Taffi cut-in that pauses the game and fills the screen with action lines
+- **Strawberry Overdrive**: giant directional pixel cannon, four-layer pink/white HDR beam, additive shader ripple, real 2D glow and GPU strawberry/heart/star particles
+- beam damage uses a long widening kill corridor, so enemies downrange explode through the normal blood + dismemberment system
 
 All placeholder art is generated in-engine so the real pixel assets can replace it without rewriting gameplay systems.
 
-See `docs/GAME_DESIGN.md` and `docs/ART_PIPELINE.md` for the direction and replacement pipeline.
+See `docs/GAME_DESIGN.md`, `docs/ART_PIPELINE.md` and `docs/VFX_PIPELINE.md` for the direction and replacement pipeline.
