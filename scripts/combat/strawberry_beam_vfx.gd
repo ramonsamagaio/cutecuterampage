@@ -111,13 +111,13 @@ func _make_line(node_name: String, base_width: float, tint: Color, energy: float
 	return line
 
 func _build_particle_emitters() -> void:
-	_particles.append(_make_particles("Strawberries", "res://assets/fx/MorangoFull.png", Vector2i(16, 16), 34, 0.82, 260.0, 520.0, 68.0, 48.0))
-	_particles.append(_make_particles("StrawberrySlices", "res://assets/fx/MorangoHaf.png", Vector2i(12, 12), 22, 0.68, 320.0, 650.0, 76.0, 18.0))
-	_particles.append(_make_particles("Hearts", "res://assets/fx/CoracaoRosaCheio.png", Vector2i(12, 12), 46, 0.68, 340.0, 690.0, 82.0, 0.0))
-	_particles.append(_make_particles("Stars", "res://assets/fx/Estrela.png", Vector2i(10, 10), 58, 0.54, 420.0, 820.0, 96.0, 0.0))
-	_particles.append(_make_particles("PinkSparkles", "res://assets/fx/BrilhoRosa.png", Vector2i(9, 9), 36, 0.42, 450.0, 900.0, 105.0, 0.0))
+	_particles.append(_make_particles("Strawberries", "res://assets/fx/MorangoFull.png", Vector2(16, 16), 34, 0.82, 260.0, 520.0, 68.0, 48.0))
+	_particles.append(_make_particles("StrawberrySlices", "res://assets/fx/MorangoHaf.png", Vector2(12, 12), 22, 0.68, 320.0, 650.0, 76.0, 18.0))
+	_particles.append(_make_particles("Hearts", "res://assets/fx/CoracaoRosaCheio.png", Vector2(12, 12), 46, 0.68, 340.0, 690.0, 82.0, 0.0))
+	_particles.append(_make_particles("Stars", "res://assets/fx/Estrela.png", Vector2(10, 10), 58, 0.54, 420.0, 820.0, 96.0, 0.0))
+	_particles.append(_make_particles("PinkSparkles", "res://assets/fx/BrilhoRosa.png", Vector2(9, 9), 36, 0.42, 450.0, 900.0, 105.0, 0.0))
 
-func _make_particles(node_name: String, texture_path: String, texture_size: Vector2i, amount: int, lifetime: float, speed_min: float, speed_max: float, vertical_spread: float, gravity_y: float) -> GPUParticles2D:
+func _make_particles(node_name: String, texture_path: String, display_size: Vector2, amount: int, lifetime: float, speed_min: float, speed_max: float, vertical_spread: float, gravity_y: float) -> GPUParticles2D:
 	var particles: GPUParticles2D = GPUParticles2D.new()
 	particles.name = node_name
 	particles.amount = amount
@@ -129,7 +129,8 @@ func _make_particles(node_name: String, texture_path: String, texture_size: Vect
 	particles.interpolate = false
 	particles.local_coords = true
 	particles.position = Vector2((MUZZLE_X + BEAM_LENGTH) * 0.5, 0.0)
-	particles.texture = CutoutArtPart.make_small_texture(texture_path, texture_size)
+	var original_texture: Texture2D = CutoutArtPart.load_original_texture(texture_path)
+	particles.texture = original_texture
 	particles.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	particles.self_modulate = Color(1.65, 1.15, 1.45, 1.0)
 	var process_material: ParticleProcessMaterial = ParticleProcessMaterial.new()
@@ -140,8 +141,9 @@ func _make_particles(node_name: String, texture_path: String, texture_size: Vect
 	process_material.initial_velocity_min = speed_min
 	process_material.initial_velocity_max = speed_max
 	process_material.gravity = Vector3(0.0, gravity_y, 0.0)
-	process_material.scale_min = 0.8
-	process_material.scale_max = 1.5
+	var texture_fit: float = RegisteredTextureMath.fit_scale(original_texture, display_size)
+	process_material.scale_min = texture_fit * 0.8
+	process_material.scale_max = texture_fit * 1.5
 	process_material.angular_velocity_min = -180.0
 	process_material.angular_velocity_max = 180.0
 	particles.process_material = process_material
