@@ -30,6 +30,8 @@ var _leg_l: CutoutArtPart
 var _leg_r: CutoutArtPart
 var _tail_art: CutoutArtPart
 
+const REGISTERED_ENEMY_CANVAS: Vector2 = Vector2(36.0, 41.0)
+
 func _ready() -> void:
 	add_to_group("enemy")
 	visual = Node2D.new()
@@ -97,27 +99,29 @@ func _apply_elite_affix() -> void:
 			_base_modulate = Color(1.0, 0.88, 0.96, 1.0)
 
 func _build_parts() -> void:
+	# All Photoshop-exported layers of a character share one source canvas. Keep every
+	# layer at the same origin and same display scale so they assemble exactly as authored.
 	if enemy_kind == "pig":
-		_head_art = _add_art_part("res://assets/enemy/porco_cabeca.png", Vector2(15, 12), Vector2(0, -6), Vector2(0.5, 0.60), 2)
-		_add_art_part("res://assets/enemy/porco_corpo.png", Vector2(12, 11), Vector2(0, 4), Vector2(0.5, 0.45), 0)
-		_arm_l = _add_art_part("res://assets/enemy/porco_maoesq.png", Vector2(5, 6), Vector2(-6, 1), Vector2(0.55, 0.18), 1)
-		_arm_r = _add_art_part("res://assets/enemy/MaoDir.png", Vector2(5, 6), Vector2(6, 1), Vector2(0.45, 0.18), 1)
-		_leg_l = _add_art_part("res://assets/enemy/PernsEsq.png", Vector2(5, 5), Vector2(-3, 9), Vector2(0.5, 0.10), -1)
-		_leg_r = _add_art_part("res://assets/enemy/porco_pernadir.png", Vector2(5, 5), Vector2(3, 9), Vector2(0.5, 0.10), -1)
+		_head_art = _add_registered_part("res://assets/enemy/porco_cabeca.png", 2)
+		_add_registered_part("res://assets/enemy/porco_corpo.png", 0)
+		_arm_l = _add_registered_part("res://assets/enemy/porco_maoesq.png", 1)
+		_arm_r = _add_registered_part("res://assets/enemy/MaoDir.png", 1)
+		_leg_l = _add_registered_part("res://assets/enemy/PernsEsq.png", -1)
+		_leg_r = _add_registered_part("res://assets/enemy/porco_pernadir.png", -1)
 	else:
-		_head_art = _add_art_part("res://assets/enemy/Pinto_cabeca.png", Vector2(13, 11), Vector2(0, -6), Vector2(0.5, 0.62), 2)
-		_add_art_part("res://assets/enemy/pinto_corpo.png", Vector2(10, 10), Vector2(0, 3), Vector2(0.5, 0.42), 0)
-		_arm_l = _add_art_part("res://assets/enemy/Pinto_Maoesq.png", Vector2(4, 5), Vector2(-5, 0), Vector2(0.55, 0.18), 1)
-		_arm_r = _add_art_part("res://assets/enemy/pinto_maodir.png", Vector2(4, 5), Vector2(5, 0), Vector2(0.45, 0.18), 1)
-		_leg_l = _add_art_part("res://assets/enemy/pinto_peEsq.png", Vector2(4, 4), Vector2(-3, 8), Vector2(0.5, 0.10), -1)
-		_leg_r = _add_art_part("res://assets/enemy/Pinto_PeDir.png", Vector2(4, 4), Vector2(3, 8), Vector2(0.5, 0.10), -1)
-		_tail_art = _add_art_part("res://assets/enemy/Pinto_rabinho.png", Vector2(4, 4), Vector2(-5, 4), Vector2(0.5, 0.5), -2)
+		_head_art = _add_registered_part("res://assets/enemy/Pinto_cabeca.png", 2)
+		_add_registered_part("res://assets/enemy/pinto_corpo.png", 0)
+		_arm_l = _add_registered_part("res://assets/enemy/Pinto_Maoesq.png", 1)
+		_arm_r = _add_registered_part("res://assets/enemy/pinto_maodir.png", 1)
+		_leg_l = _add_registered_part("res://assets/enemy/pinto_peEsq.png", -1)
+		_leg_r = _add_registered_part("res://assets/enemy/Pinto_PeDir.png", -1)
+		_tail_art = _add_registered_part("res://assets/enemy/Pinto_rabinho.png", -2)
 
-func _add_art_part(path: String, size: Vector2, local_pos: Vector2, pivot: Vector2, layer: int) -> CutoutArtPart:
+func _add_registered_part(path: String, layer: int) -> CutoutArtPart:
 	var part: CutoutArtPart = CutoutArtPart.new()
-	part.position = local_pos
+	part.position = Vector2.ZERO
 	part.art_z_index = layer
-	part.configure(path, size, pivot)
+	part.configure(path, REGISTERED_ENEMY_CANVAS, Vector2(0.5, 0.5))
 	visual.add_child(part)
 	parts.append(part)
 	return part
@@ -140,7 +144,7 @@ func _physics_process(delta: float) -> void:
 		visual.scale.x = absf(visual.scale.x) * signf(velocity.x)
 	_animate_parts(delta)
 
-	if distance < 23.0 and attack_cooldown <= 0.0:
+	if distance < 31.0 and attack_cooldown <= 0.0:
 		var impact_multiplier: float = 1.55 if archetype == "charger" and _charge_active > 0.0 else 1.0
 		player_node.call("take_damage", contact_damage * impact_multiplier)
 		attack_cooldown = 0.9
@@ -148,13 +152,17 @@ func _physics_process(delta: float) -> void:
 func _animate_parts(delta: float) -> void:
 	_anim_phase = fmod(_anim_phase + delta * (7.0 + move_speed * 0.018), TAU)
 	var swing: float = sin(_anim_phase)
-	visual.position.y = -roundf(absf(sin(_anim_phase * 2.0)) * 0.8)
-	if is_instance_valid(_head_art): _head_art.rotation = swing * 0.018
-	if is_instance_valid(_arm_l): _arm_l.rotation = swing * 0.16
-	if is_instance_valid(_arm_r): _arm_r.rotation = -swing * 0.16
-	if is_instance_valid(_leg_l): _leg_l.rotation = -swing * 0.08
-	if is_instance_valid(_leg_r): _leg_r.rotation = swing * 0.08
-	if is_instance_valid(_tail_art): _tail_art.rotation = sin(_anim_phase - 0.7) * 0.18
+	var step: float = 1.0 if swing >= 0.0 else -1.0
+	visual.position.y = -roundf(absf(sin(_anim_phase * 2.0)) * 1.0)
+
+	# Registered full-canvas layers should not rotate around the canvas center. Tiny
+	# integer-like translations preserve the Photoshop assembly while adding motion.
+	if is_instance_valid(_head_art): _head_art.position = Vector2(0.0, -1.0 if absf(swing) > 0.72 else 0.0)
+	if is_instance_valid(_arm_l): _arm_l.position = Vector2(0.0, step)
+	if is_instance_valid(_arm_r): _arm_r.position = Vector2(0.0, -step)
+	if is_instance_valid(_leg_l): _leg_l.position = Vector2(0.0, -1.0 if step > 0.0 else 0.0)
+	if is_instance_valid(_leg_r): _leg_r.position = Vector2(0.0, -1.0 if step < 0.0 else 0.0)
+	if is_instance_valid(_tail_art): _tail_art.position = Vector2(-1.0 if swing > 0.35 else 0.0, 0.0)
 
 func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
 	visual.modulate = _base_modulate
@@ -225,7 +233,7 @@ func _die(hit_direction: Vector2) -> void:
 				force_dir = Vector2.RIGHT.rotated(randf() * TAU)
 			force_dir = force_dir.rotated(randf_range(-0.9, 0.9))
 			var scaled_size: Vector2 = chunk_part.target_size * absf(visual.scale.x)
-			blood_node.call("spawn_art_chunk", chunk_part.global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(65.0, 125.0))
+			blood_node.call("spawn_art_chunk", global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(65.0, 125.0))
 	if elite and elite_affix == "volatile":
 		var game_node: Node = get_tree().get_first_node_in_group("game")
 		if game_node != null:
