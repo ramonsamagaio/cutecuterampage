@@ -1,0 +1,91 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/actors/taffi.gd" id="1_taffi"]
+[ext_resource type="Script" path="res://scripts/actors/pixel_part.gd" id="2_part"]
+
+[node name="Taffi" type="CharacterBody2D"]
+script = ExtResource("1_taffi")
+
+[node name="Visual" type="Node2D" parent="."]
+scale = Vector2(3, 3)
+
+[node name="Skeleton2D" type="Skeleton2D" parent="Visual"]
+
+[node name="HipRoot" type="Bone2D" parent="Visual/Skeleton2D"]
+
+[node name="Torso" type="Bone2D" parent="Visual/Skeleton2D/HipRoot"]
+position = Vector2(0, -3)
+
+[node name="TorsoPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
+script = ExtResource("2_part")
+part_kind = "torso"
+
+[node name="Head" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
+position = Vector2(0, -7)
+
+[node name="HeadPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
+script = ExtResource("2_part")
+part_kind = "head"
+
+[node name="EarL" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
+position = Vector2(-3, -6)
+
+[node name="EarLPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/EarL"]
+script = ExtResource("2_part")
+part_kind = "ear_l"
+
+[node name="EarR" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
+position = Vector2(3, -6)
+
+[node name="EarRPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/EarR"]
+script = ExtResource("2_part")
+part_kind = "ear_r"
+
+[node name="Bow" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head"]
+position = Vector2(-4, -4)
+
+[node name="BowPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/Head/Bow"]
+script = ExtResource("2_part")
+part_kind = "bow"
+
+[node name="ArmBack" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
+position = Vector2(-5, 0)
+
+[node name="ArmBackPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmBack"]
+script = ExtResource("2_part")
+part_kind = "arm_back"
+
+[node name="ArmWeapon" type="Bone2D" parent="Visual/Skeleton2D/HipRoot/Torso"]
+position = Vector2(5, 0)
+
+[node name="ArmWeaponPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon"]
+script = ExtResource("2_part")
+part_kind = "arm_weapon"
+
+[node name="WeaponSocket" type="Marker2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon"]
+position = Vector2(3, 1)
+
+[node name="WeaponPlaceholder" type="Node2D" parent="Visual/Skeleton2D/HipRoot/Torso/ArmWeapon/WeaponSocket"]
+script = ExtResource("2_part")
+part_kind = "weapon_blaster"
+
+[node name="LegL" type="Bone2D" parent="Visual/Skeleton2D/HipRoot"]
+position = Vector2(-2, 5)
+
+[node name="LegLPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/LegL"]
+script = ExtResource("2_part")
+part_kind = "leg"
+
+[node name="LegR" type="Bone2D" parent="Visual/Skeleton2D/HipRoot"]
+position = Vector2(2, 5)
+
+[node name="LegRPart" type="Node2D" parent="Visual/Skeleton2D/HipRoot/LegR"]
+script = ExtResource("2_part")
+part_kind = "leg"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, -24)
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
