@@ -6,35 +6,37 @@ The visual hook is sugary mascot-world pixel art colliding with exaggerated arca
 
 ## Play the placeholder vertical slice
 
-Open the project in Godot 4.6 and run `scenes/Main.tscn` (it is already configured as the main scene).
+Open the project in Godot 4.6 and run `scenes/Main.tscn`.
 
 ### Controls
 
 - **WASD / arrows**: move
-- **Shift**: dash
+- **Shift**: dash / Perfect Dodge through hostile candy bullets
 - **Space**: trigger Special when the pink meter is full
+- **Mouse**: aim Strawberry Overdrive while its giant cannon is active
 - **SPECIAL ♡ button**: same Special from the HUD
 
-Taffi auto-fires at the nearest enemy for now so the first slice can focus on movement, dodging, horde pressure and build choices.
+Taffi auto-fires her build so the player can focus on movement, threat reading, dash timing, positioning and upgrade decisions.
 
-## Already scaffolded
+## Current gameplay slice
 
-- Taffi `Skeleton2D` / `Bone2D` placeholder rig with a mathematical hopping walk cycle
-- separate ears, bow, weapon arm and `WeaponSocket`
-- runtime-generated seamless 32px grass TileSet
-- 16x16 tile chunk streaming, one new chunk per frame
-- auto-fire, dash, XP, level-up choices and multishot/damage/fire-rate/speed/HP upgrades
-- escalating chick/pig hordes and periodic surges
-- heart projectile placeholders
-- pixel blood droplets and persistent bounded ground splats
-- blood that can stain enemy body parts before death
-- dismembered head/body/leg chunks carrying blood stains
-- CUTE / KAWAII / SUGAR RUSH / STRAWBERRY JUICE combo language
-- Special meter charged by kills
-- anime-style Taffi cut-in that pauses the game and fills the screen with action lines
-- **Strawberry Overdrive**: giant directional pixel cannon, four-layer pink/white HDR beam, additive shader ripple, real 2D glow and GPU strawberry/heart/star particles
-- beam damage uses a long widening kill corridor, so enemies downrange explode through the normal blood + dismemberment system
+- Taffi `Skeleton2D` / `Bone2D` placeholder rig with mathematical hopping walk cycle
+- runtime-generated seamless 32px grass TileSet and bounded chunk streaming
+- pixel blood droplets, persistent ground splats, body stains and dismemberment chunks
+- chasers, ranged shooters, telegraphed chargers and elite affixes
+- escalating adaptive `DANGER` director driven by both time and player level
+- Perfect Dodge with invulnerability, combo and Special reward
+- nonlinear XP curve and level-up build choices
+- **Heart Blaster**, **Cupcake Mortar** and **Love Orbit** weapon families
+- legendary weapon evolutions: **Heartstorm**, **Birthday Massacre** and **Halo of Hugs**
+- elite reward chests and boss evolution chest loop
+- **Cute Meter** momentum system: successful carnage increases damage/XP and progressively adds cute screen feedback; getting hit tears momentum down
+- first two-phase boss, **Queen Mallow**, with radial barrages, aimed phase-two fan shots and telegraphed charges
+- boss health HUD and reward callouts
+- anime-style Taffi Special cut-in
+- **Strawberry Overdrive**: 4.25-second mouse-aimed giant pixel cannon with layered HDR beam, glow, strawberries/hearts/stars and continuous sweep damage
+- Special damage vaporizes normal hordes but is capped per tick on bosses so aiming the full beam matters
 
-All placeholder art is generated in-engine so the real pixel assets can replace it without rewriting gameplay systems.
+All placeholder art is generated in-engine so final sprites can replace it without rewriting the gameplay architecture.
 
-See `docs/GAME_DESIGN.md`, `docs/ART_PIPELINE.md` and `docs/VFX_PIPELINE.md` for the direction and replacement pipeline.
+See `docs/GAME_DESIGN.md`, `docs/DEPTH_PASS_01.md`, `docs/DEPTH_PASS_02.md`, `docs/ART_PIPELINE.md` and `docs/VFX_PIPELINE.md` for the direction and replacement pipeline.
