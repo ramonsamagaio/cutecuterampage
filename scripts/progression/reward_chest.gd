@@ -49,6 +49,7 @@ func _draw() -> void:
 	draw_rect(Rect2(p + Vector2(-4, -6), Vector2(8, 12)), gold)
 	draw_rect(Rect2(p + Vector2(-1, -3), Vector2(2, 4)), shine)
 	if legendary:
-		for offset: Vector2 in [Vector2(-27, -20), Vector2(25, -16), Vector2(-29, 8), Vector2(27, 12)]:
+		var sparkle_offsets: Array[Vector2] = [Vector2(-27, -20), Vector2(25, -16), Vector2(-29, 8), Vector2(27, 12)]
+		for offset: Vector2 in sparkle_offsets:
 			draw_rect(Rect2(p + offset + Vector2(-4, -1), Vector2(8, 2)), shine)
 			draw_rect(Rect2(p + offset + Vector2(-1, -4), Vector2(2, 8)), shine)
