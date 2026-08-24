@@ -1,7 +1,8 @@
 class_name CutoutArtPart
 extends Node2D
 
-static var _texture_cache: Dictionary[String, Texture2D] = {}
+static var _original_cache: Dictionary[String, Texture2D] = {}
+static var _standalone_cache: Dictionary[String, Texture2D] = {}
 
 @export_file("*.png") var texture_path: String = ""
 @export var target_size: Vector2 = Vector2(32.0, 32.0)
@@ -15,18 +16,43 @@ var blood_stains: Array[Vector2] = []
 static func load_original_texture(path: String) -> Texture2D:
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
-	var cached_value: Variant = _texture_cache.get(path, null)
+	var cached_value: Variant = _original_cache.get(path, null)
 	if cached_value is Texture2D:
 		return cached_value as Texture2D
 	var source_texture: Texture2D = load(path) as Texture2D
 	if source_texture != null:
-		_texture_cache[path] = source_texture
+		_original_cache[path] = source_texture
 	return source_texture
 
-# Kept for old call sites. It intentionally does NOT bake, crop or resize anymore.
-# `max_size` is ignored; callers that need a display size should scale the node/quad.
-static func make_small_texture(path: String, _max_size: Vector2i) -> Texture2D:
-	return load_original_texture(path)
+# Standalone art (weapons, FX, HUD) is allowed to trim transparent margins and bake
+# a tiny nearest-neighbour texture. Registered character body layers never call this.
+static func make_small_texture(path: String, max_size: Vector2i) -> Texture2D:
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var safe_size: Vector2i = Vector2i(maxi(1, max_size.x), maxi(1, max_size.y))
+	var cache_key: String = "%s@%dx%d" % [path, safe_size.x, safe_size.y]
+	var cached_value: Variant = _standalone_cache.get(cache_key, null)
+	if cached_value is Texture2D:
+		return cached_value as Texture2D
+	var source_texture: Texture2D = load_original_texture(path)
+	if source_texture == null:
+		return null
+	var source_image: Image = source_texture.get_image()
+	if source_image == null or source_image.is_empty():
+		return source_texture
+	var used_rect: Rect2i = source_image.get_used_rect()
+	if used_rect.size.x <= 0 or used_rect.size.y <= 0:
+		return source_texture
+	var cropped: Image = source_image.get_region(used_rect)
+	var ratio_x: float = float(safe_size.x) / float(maxi(1, cropped.get_width()))
+	var ratio_y: float = float(safe_size.y) / float(maxi(1, cropped.get_height()))
+	var ratio: float = minf(ratio_x, ratio_y)
+	var baked_width: int = maxi(1, roundi(float(cropped.get_width()) * ratio))
+	var baked_height: int = maxi(1, roundi(float(cropped.get_height()) * ratio))
+	cropped.resize(baked_width, baked_height, Image.INTERPOLATE_NEAREST)
+	var baked_texture: ImageTexture = ImageTexture.create_from_image(cropped)
+	_standalone_cache[cache_key] = baked_texture
+	return baked_texture
 
 func _ready() -> void:
 	_rebuild()
@@ -59,16 +85,11 @@ func _rebuild() -> void:
 		return
 	sprite.visible = true
 
-	# Important: preserve the complete transparent source canvas. This is what keeps
-	# all Photoshop-exported body parts registered to each other. Only Sprite2D scale
-	# changes; the PNG itself is never cropped or resampled.
+	# Registered body-part PNGs keep their complete transparent canvas. Every part is
+	# scaled by the exact same full-canvas factor, so Photoshop registration survives.
 	var source_size: Vector2 = original_texture.get_size()
 	var fit: float = RegisteredTextureMath.fit_scale(original_texture, target_size)
 	sprite.scale = Vector2.ONE * fit
-
-	# Optional anchor adjustment for standalone graphics such as weapons. Character
-	# body layers use pivot_fraction = (0.5, 0.5), so their registered canvases remain
-	# perfectly superimposed.
 	sprite.offset = Vector2(
 		(0.5 - pivot_fraction.x) * source_size.x,
 		(0.5 - pivot_fraction.y) * source_size.y
@@ -76,7 +97,7 @@ func _rebuild() -> void:
 
 func add_blood_stain(local_pos: Vector2 = Vector2.ZERO) -> void:
 	blood_stains.append(local_pos)
-	if blood_stains.size() > 7:
+	if blood_stains.size() > 10:
 		blood_stains.pop_front()
 	queue_redraw()
 
@@ -88,6 +109,5 @@ func add_random_blood_stain(amount: int = 1) -> void:
 
 func _draw() -> void:
 	for stain: Vector2 in blood_stains:
-		draw_rect(Rect2(stain - Vector2(1.5, 1.0), Vector2(3.0, 2.0)), Color("b41435"))
-		if int(absf(stain.x + stain.y)) % 2 == 0:
-			draw_rect(Rect2(stain + Vector2(1.0, 1.0), Vector2(1.5, 1.5)), Color("e32642"))
+		draw_rect(Rect2(stain - Vector2(2.0, 1.5), Vector2(4.0, 3.0)), Color("9e092c"))
+		draw_rect(Rect2(stain + Vector2(1.0, 1.0), Vector2(2.0, 2.0)), Color("e32642"))

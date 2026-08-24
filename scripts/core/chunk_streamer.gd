@@ -27,7 +27,6 @@ func _process(_delta: float) -> void:
 	if center != _last_center:
 		_last_center = center
 		_refresh_requested_chunks(center)
-	# Important: one chunk per frame. Never dump a whole ring onto the main thread.
 	if not _queue.is_empty():
 		var next_chunk: Vector2i = _queue.pop_front()
 		_build_chunk(next_chunk)
@@ -65,4 +64,8 @@ func _build_chunk(coord: Vector2i) -> void:
 			var mixed: int = absi((wx * 73856093) ^ (wy * 19349663))
 			var variant: int = mixed % 4
 			layer.set_cell(Vector2i(x, y), 0, Vector2i(variant, 0), 0)
+	var dressing: GardenDressing = GardenDressing.new()
+	dressing.name = "GardenDressing"
+	dressing.configure(coord, CHUNK_SIZE * TILE_SIZE)
+	layer.add_child(dressing)
 	_active[coord] = layer

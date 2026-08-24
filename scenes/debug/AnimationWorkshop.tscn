@@ -1,0 +1,205 @@
+[gd_scene load_steps=18 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/actors/Taffi.tscn" id="1_taffi"]
+[ext_resource type="Texture2D" path="res://assets/enemy/Pinto_cabeca.png" id="2_ch_head"]
+[ext_resource type="Texture2D" path="res://assets/enemy/pinto_corpo.png" id="3_ch_body"]
+[ext_resource type="Texture2D" path="res://assets/enemy/Pinto_Maoesq.png" id="4_ch_arm_l"]
+[ext_resource type="Texture2D" path="res://assets/enemy/pinto_maodir.png" id="5_ch_arm_r"]
+[ext_resource type="Texture2D" path="res://assets/enemy/pinto_peEsq.png" id="6_ch_leg_l"]
+[ext_resource type="Texture2D" path="res://assets/enemy/Pinto_PeDir.png" id="7_ch_leg_r"]
+[ext_resource type="Texture2D" path="res://assets/enemy/Pinto_rabinho.png" id="8_ch_tail"]
+[ext_resource type="Texture2D" path="res://assets/enemy/porco_cabeca.png" id="9_pig_head"]
+[ext_resource type="Texture2D" path="res://assets/enemy/porco_corpo.png" id="10_pig_body"]
+[ext_resource type="Texture2D" path="res://assets/enemy/porco_maoesq.png" id="11_pig_arm_l"]
+[ext_resource type="Texture2D" path="res://assets/enemy/MaoDir.png" id="12_pig_arm_r"]
+[ext_resource type="Texture2D" path="res://assets/enemy/PernsEsq.png" id="13_pig_leg_l"]
+[ext_resource type="Texture2D" path="res://assets/enemy/porco_pernadir.png" id="14_pig_leg_r"]
+[ext_resource type="Script" path="res://scripts/art/weapon_visual.gd" id="15_weapon"]
+
+[node name="AnimationWorkshop" type="Node2D"]
+
+[node name="Title" type="Label" parent="."]
+position = Vector2(24, 18)
+text = "CuteCute Rampage — ANIMATION / WEAPON FIT WORKSHOP"
+theme_override_font_sizes/font_size = 24
+
+[node name="Help" type="Label" parent="."]
+position = Vector2(24, 52)
+size = Vector2(1220, 70)
+text = "Taffi is an editable instance: keyframe her Bone2D nodes in AnimationPlayer. Chicken/Pig use pivot nodes below.\nEvery body layer keeps its complete registered PNG canvas. Adjust PIVOTS / rotations / positions here, never crop the character PNGs. Weapon rack uses the same runtime profiles."
+theme_override_font_sizes/font_size = 15
+
+[node name="TaffiLabel" type="Label" parent="."]
+position = Vector2(160, 140)
+text = "TAFFI — edit bones + WeaponSocket"
+theme_override_font_sizes/font_size = 17
+
+[node name="TaffiPreview" parent="." instance=ExtResource("1_taffi")]
+position = Vector2(285, 405)
+
+[node name="ChickenLabel" type="Label" parent="."]
+position = Vector2(535, 140)
+text = "CHICKEN — keyframe pivots"
+theme_override_font_sizes/font_size = 17
+
+[node name="ChickenRig" type="Node2D" parent="."]
+position = Vector2(650, 400)
+scale = Vector2(0.095, 0.095)
+
+[node name="Body" type="Sprite2D" parent="ChickenRig"]
+texture_filter = 1
+texture = ExtResource("3_ch_body")
+z_index = 0
+
+[node name="HeadPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(0, -182)
+
+[node name="Head" type="Sprite2D" parent="ChickenRig/HeadPivot"]
+texture_filter = 1
+position = Vector2(0, 182)
+texture = ExtResource("2_ch_head")
+z_index = 3
+
+[node name="ArmLPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(-182, 0)
+
+[node name="ArmL" type="Sprite2D" parent="ChickenRig/ArmLPivot"]
+texture_filter = 1
+position = Vector2(182, 0)
+texture = ExtResource("4_ch_arm_l")
+z_index = 2
+
+[node name="ArmRPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(182, 0)
+
+[node name="ArmR" type="Sprite2D" parent="ChickenRig/ArmRPivot"]
+texture_filter = 1
+position = Vector2(-182, 0)
+texture = ExtResource("5_ch_arm_r")
+z_index = 2
+
+[node name="LegLPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(-104, 208)
+
+[node name="LegL" type="Sprite2D" parent="ChickenRig/LegLPivot"]
+texture_filter = 1
+position = Vector2(104, -208)
+texture = ExtResource("6_ch_leg_l")
+z_index = -1
+
+[node name="LegRPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(104, 208)
+
+[node name="LegR" type="Sprite2D" parent="ChickenRig/LegRPivot"]
+texture_filter = 1
+position = Vector2(-104, -208)
+texture = ExtResource("7_ch_leg_r")
+z_index = -1
+
+[node name="TailPivot" type="Node2D" parent="ChickenRig"]
+position = Vector2(-182, 78)
+
+[node name="Tail" type="Sprite2D" parent="ChickenRig/TailPivot"]
+texture_filter = 1
+position = Vector2(182, -78)
+texture = ExtResource("8_ch_tail")
+z_index = -2
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="ChickenRig"]
+
+[node name="PigLabel" type="Label" parent="."]
+position = Vector2(890, 140)
+text = "PIG — keyframe pivots"
+theme_override_font_sizes/font_size = 17
+
+[node name="PigRig" type="Node2D" parent="."]
+position = Vector2(1015, 400)
+scale = Vector2(0.095, 0.095)
+
+[node name="Body" type="Sprite2D" parent="PigRig"]
+texture_filter = 1
+texture = ExtResource("10_pig_body")
+z_index = 0
+
+[node name="HeadPivot" type="Node2D" parent="PigRig"]
+position = Vector2(0, -182)
+
+[node name="Head" type="Sprite2D" parent="PigRig/HeadPivot"]
+texture_filter = 1
+position = Vector2(0, 182)
+texture = ExtResource("9_pig_head")
+z_index = 3
+
+[node name="ArmLPivot" type="Node2D" parent="PigRig"]
+position = Vector2(-182, 0)
+
+[node name="ArmL" type="Sprite2D" parent="PigRig/ArmLPivot"]
+texture_filter = 1
+position = Vector2(182, 0)
+texture = ExtResource("11_pig_arm_l")
+z_index = 2
+
+[node name="ArmRPivot" type="Node2D" parent="PigRig"]
+position = Vector2(182, 0)
+
+[node name="ArmR" type="Sprite2D" parent="PigRig/ArmRPivot"]
+texture_filter = 1
+position = Vector2(-182, 0)
+texture = ExtResource("12_pig_arm_r")
+z_index = 2
+
+[node name="LegLPivot" type="Node2D" parent="PigRig"]
+position = Vector2(-104, 208)
+
+[node name="LegL" type="Sprite2D" parent="PigRig/LegLPivot"]
+texture_filter = 1
+position = Vector2(104, -208)
+texture = ExtResource("13_pig_leg_l")
+z_index = -1
+
+[node name="LegRPivot" type="Node2D" parent="PigRig"]
+position = Vector2(104, 208)
+
+[node name="LegR" type="Sprite2D" parent="PigRig/LegRPivot"]
+texture_filter = 1
+position = Vector2(-104, -208)
+texture = ExtResource("14_pig_leg_r")
+z_index = -1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="PigRig"]
+
+[node name="WeaponRackLabel" type="Label" parent="."]
+position = Vector2(72, 592)
+text = "RUNTIME WEAPON FIT PROFILES — select a WeaponVisual and tune fit_offset / fit_rotation_degrees"
+theme_override_font_sizes/font_size = 15
+
+[node name="WeaponRack" type="Node2D" parent="."]
+position = Vector2(95, 660)
+scale = Vector2(3, 3)
+
+[node name="Heart" type="Node2D" parent="WeaponRack"]
+script = ExtResource("15_weapon")
+preview_kind = "heart"
+
+[node name="Star" type="Node2D" parent="WeaponRack"]
+position = Vector2(45, 0)
+script = ExtResource("15_weapon")
+preview_kind = "star"
+
+[node name="Bow" type="Node2D" parent="WeaponRack"]
+position = Vector2(90, 0)
+script = ExtResource("15_weapon")
+preview_kind = "bow"
+
+[node name="Cupcake" type="Node2D" parent="WeaponRack"]
+position = Vector2(140, 0)
+script = ExtResource("15_weapon")
+preview_kind = "cupcake"
+
+[node name="DebugHelp" type="Label" parent="."]
+position = Vector2(760, 625)
+size = Vector2(470, 70)
+text = "GAMEPLAY DEBUG: Z = Strawberry Bomb   X = Cluster Cupcake   C = Strawberry Nuke\nOpen this scene directly for hand animation work."
+theme_override_font_sizes/font_size = 15
+
+[editable path="TaffiPreview"]

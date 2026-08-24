@@ -10,8 +10,8 @@ var _normal_texture: Texture2D
 var _evolved_texture: Texture2D
 
 func _ready() -> void:
-	_normal_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoRosaMoldura.png", Vector2i(12, 12))
-	_evolved_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoAlado.png", Vector2i(17, 17))
+	_normal_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoRosaMoldura.png", Vector2i(8, 8))
+	_evolved_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoAlado.png", Vector2i(11, 11))
 
 func configure(player: TaffiController, level_value: int, is_evolved: bool) -> void:
 	owner_player = player
@@ -28,7 +28,7 @@ func _process(delta: float) -> void:
 		queue_free()
 		return
 	global_position = owner_player.global_position
-	_angle = fmod(_angle + delta * (2.1 + float(orbit_level) * 0.08), TAU)
+	_angle = fmod(_angle + delta * (2.25 + float(orbit_level) * 0.08), TAU)
 	_tick_timer -= delta
 	if _tick_timer <= 0.0:
 		_tick_timer = 0.11
@@ -48,7 +48,7 @@ func _damage_nearby() -> void:
 		for i: int in count:
 			var phase: float = _angle + TAU * float(i) / float(count)
 			var orb_pos: Vector2 = global_position + Vector2.RIGHT.rotated(phase) * radius
-			if orb_pos.distance_squared_to(enemy.global_position) <= 20.0 * 20.0:
+			if orb_pos.distance_squared_to(enemy.global_position) <= 16.0 * 16.0:
 				enemy.call("take_damage", damage_amount, orb_pos.direction_to(enemy.global_position), false)
 				break
 
@@ -58,7 +58,7 @@ func _orb_count() -> int:
 	return mini(5, 2 + floori(float(orbit_level) * 0.75))
 
 func _orbit_radius() -> float:
-	return 48.0 + float(orbit_level) * 3.0 + (10.0 if evolved else 0.0)
+	return 67.0 + float(orbit_level) * 2.5 + (8.0 if evolved else 0.0)
 
 func _draw() -> void:
 	var count: int = _orb_count()

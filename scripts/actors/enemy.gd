@@ -31,12 +31,13 @@ var _leg_r: CutoutArtPart
 var _tail_art: CutoutArtPart
 
 const REGISTERED_ENEMY_CANVAS: Vector2 = Vector2(36.0, 41.0)
+const BASE_VISUAL_SCALE: float = 2.05
 
 func _ready() -> void:
 	add_to_group("enemy")
 	visual = Node2D.new()
 	visual.name = "Visual"
-	visual.scale = Vector2(1.65, 1.65) * (1.2 if elite else 1.0)
+	visual.scale = Vector2(BASE_VISUAL_SCALE, BASE_VISUAL_SCALE) * (1.22 if elite else 1.0)
 	add_child(visual)
 
 	if enemy_kind == "pig":
@@ -99,8 +100,6 @@ func _apply_elite_affix() -> void:
 			_base_modulate = Color(1.0, 0.88, 0.96, 1.0)
 
 func _build_parts() -> void:
-	# All Photoshop-exported layers of a character share one source canvas. Keep every
-	# layer at the same origin and same display scale so they assemble exactly as authored.
 	if enemy_kind == "pig":
 		_head_art = _add_registered_part("res://assets/enemy/porco_cabeca.png", 2)
 		_add_registered_part("res://assets/enemy/porco_corpo.png", 0)
@@ -144,7 +143,7 @@ func _physics_process(delta: float) -> void:
 		visual.scale.x = absf(visual.scale.x) * signf(velocity.x)
 	_animate_parts(delta)
 
-	if distance < 31.0 and attack_cooldown <= 0.0:
+	if distance < 38.0 and attack_cooldown <= 0.0:
 		var impact_multiplier: float = 1.55 if archetype == "charger" and _charge_active > 0.0 else 1.0
 		player_node.call("take_damage", contact_damage * impact_multiplier)
 		attack_cooldown = 0.9
@@ -153,16 +152,13 @@ func _animate_parts(delta: float) -> void:
 	_anim_phase = fmod(_anim_phase + delta * (7.0 + move_speed * 0.018), TAU)
 	var swing: float = sin(_anim_phase)
 	var step: float = 1.0 if swing >= 0.0 else -1.0
-	visual.position.y = -roundf(absf(sin(_anim_phase * 2.0)) * 1.0)
-
-	# Registered full-canvas layers should not rotate around the canvas center. Tiny
-	# integer-like translations preserve the Photoshop assembly while adding motion.
-	if is_instance_valid(_head_art): _head_art.position = Vector2(0.0, -1.0 if absf(swing) > 0.72 else 0.0)
-	if is_instance_valid(_arm_l): _arm_l.position = Vector2(0.0, step)
-	if is_instance_valid(_arm_r): _arm_r.position = Vector2(0.0, -step)
-	if is_instance_valid(_leg_l): _leg_l.position = Vector2(0.0, -1.0 if step > 0.0 else 0.0)
-	if is_instance_valid(_leg_r): _leg_r.position = Vector2(0.0, -1.0 if step < 0.0 else 0.0)
-	if is_instance_valid(_tail_art): _tail_art.position = Vector2(-1.0 if swing > 0.35 else 0.0, 0.0)
+	visual.position.y = -roundf(absf(sin(_anim_phase * 2.0)) * 1.3)
+	if is_instance_valid(_head_art): _head_art.position = Vector2(0.0, -1.0 if absf(swing) > 0.66 else 0.0)
+	if is_instance_valid(_arm_l): _arm_l.position = Vector2(0.0, step * 1.4)
+	if is_instance_valid(_arm_r): _arm_r.position = Vector2(0.0, -step * 1.4)
+	if is_instance_valid(_leg_l): _leg_l.position = Vector2(0.0, -1.4 if step > 0.0 else 0.0)
+	if is_instance_valid(_leg_r): _leg_r.position = Vector2(0.0, -1.4 if step < 0.0 else 0.0)
+	if is_instance_valid(_tail_art): _tail_art.position = Vector2(-1.3 if swing > 0.35 else 0.0, 0.0)
 
 func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
 	visual.modulate = _base_modulate
@@ -172,7 +168,6 @@ func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
 		velocity = -to_player * move_speed * 0.82
 	else:
 		velocity = to_player.rotated(PI * 0.5 * _strafe_sign) * move_speed * 0.58
-
 	_shoot_timer -= delta
 	if _shoot_timer <= 0.0 and distance < 570.0:
 		var game_node: Node = get_tree().get_first_node_in_group("game")
@@ -198,7 +193,6 @@ func _move_charger(delta: float, to_player: Vector2, distance: float) -> void:
 			_charge_direction = to_player
 			_charge_active = 0.56
 		return
-
 	visual.modulate = _base_modulate
 	_charge_cooldown -= delta
 	velocity = to_player * move_speed
@@ -210,30 +204,36 @@ func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critic
 	health -= amount
 	if not parts.is_empty():
 		var part: CutoutArtPart = parts[randi() % parts.size()]
-		part.add_random_blood_stain(2 if is_critical else 1)
+		part.add_random_blood_stain(3 if is_critical else 1)
+	var root: Node = get_tree().current_scene
+	if root != null:
+		var number: DamageNumber = DamageNumber.new()
+		root.add_child(number)
+		number.configure(global_position + Vector2(randf_range(-8.0, 8.0), -24.0), amount, is_critical)
 	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
 	if blood_node != null:
-		blood_node.call("emit_burst", global_position, hit_direction, 7 if is_critical else 4)
+		blood_node.call("emit_burst", global_position, hit_direction, 14 if is_critical else 8)
 	if health <= 0.0:
 		_die(hit_direction)
 
 func _die(hit_direction: Vector2) -> void:
 	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
 	if blood_node != null:
-		blood_node.call("emit_burst", global_position, hit_direction, 20 if elite else 11)
+		blood_node.call("emit_burst", global_position, hit_direction, 46 if elite else 28)
+		blood_node.call("add_massive_splat", global_position, 12 if elite else 8, Color("a60930"))
 		var chunk_parts: Array[CutoutArtPart] = []
 		for part: CutoutArtPart in parts:
 			chunk_parts.append(part)
 		chunk_parts.shuffle()
-		var chunk_count: int = mini(chunk_parts.size(), 4 if elite else 3)
+		var chunk_count: int = mini(chunk_parts.size(), 6 if elite else 4)
 		for i: int in chunk_count:
 			var chunk_part: CutoutArtPart = chunk_parts[i]
 			var force_dir: Vector2 = hit_direction
 			if force_dir == Vector2.ZERO:
 				force_dir = Vector2.RIGHT.rotated(randf() * TAU)
-			force_dir = force_dir.rotated(randf_range(-0.9, 0.9))
+			force_dir = force_dir.rotated(randf_range(-1.15, 1.15))
 			var scaled_size: Vector2 = chunk_part.target_size * absf(visual.scale.x)
-			blood_node.call("spawn_art_chunk", global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(65.0, 125.0))
+			blood_node.call("spawn_art_chunk", global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(85.0, 155.0))
 	if elite and elite_affix == "volatile":
 		var game_node: Node = get_tree().get_first_node_in_group("game")
 		if game_node != null:
