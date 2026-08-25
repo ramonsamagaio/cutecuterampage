@@ -8,6 +8,12 @@
 [node name="Taffi" type="CharacterBody2D"]
 script = ExtResource("1_taffi")
 
+[node name="GroundShadow" type="Polygon2D" parent="."]
+position = Vector2(0, 14)
+polygon = PackedVector2Array(-19, 0, -15, -5, -7, -8, 7, -8, 15, -5, 19, 0, 14, 5, 6, 7, -6, 7, -14, 5)
+color = Color(0.12, 0.18, 0.1, 0.23)
+z_index = -8
+
 [node name="Visual" type="Node2D" parent="."]
 scale = Vector2(3, 3)
 
@@ -159,11 +165,12 @@ pivot_fraction = Vector2(0.5, 0.5)
 
 [node name="AimRig" type="Node" parent="."]
 script = ExtResource("4_aim")
-visual_scale = 3.0
+visual_scale = 3.45
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -20)
+zoom = Vector2(1.1, 1.1)
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
