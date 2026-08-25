@@ -37,6 +37,7 @@ const BASE_VISUAL_SCALE: float = 2.36
 
 func _ready() -> void:
 	add_to_group("enemy")
+	_build_shadow()
 	visual = Node2D.new()
 	visual.name = "Visual"
 	visual.scale = Vector2(BASE_VISUAL_SCALE, BASE_VISUAL_SCALE) * (1.22 if elite else 1.0)
@@ -82,6 +83,19 @@ func _ready() -> void:
 	visual.modulate = _base_modulate
 	_strafe_sign = -1.0 if randf() < 0.5 else 1.0
 	_build_parts()
+
+func _build_shadow() -> void:
+	var shadow: Polygon2D = Polygon2D.new()
+	shadow.name = "GroundShadow"
+	shadow.position = Vector2(0, 14)
+	shadow.polygon = PackedVector2Array([
+		Vector2(-16, 0), Vector2(-12, -4), Vector2(-5, -6), Vector2(5, -6),
+		Vector2(12, -4), Vector2(16, 0), Vector2(11, 4), Vector2(4, 6),
+		Vector2(-4, 6), Vector2(-11, 4)
+	])
+	shadow.color = Color(0.12, 0.18, 0.10, 0.20)
+	shadow.z_index = -8
+	add_child(shadow)
 
 func _apply_elite_affix() -> void:
 	match elite_affix:
@@ -135,6 +149,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var to_player: Vector2 = global_position.direction_to(player_node.global_position)
 	var distance: float = global_position.distance_to(player_node.global_position)
+	visual.modulate = _base_modulate
 
 	match archetype:
 		"shooter": _move_shooter(delta, to_player, distance)
@@ -153,6 +168,9 @@ func _physics_process(delta: float) -> void:
 	if distance < 42.0 and attack_cooldown <= 0.0:
 		var impact_multiplier: float = 1.55 if archetype == "charger" and _charge_active > 0.0 else 1.0
 		player_node.call("take_damage", contact_damage * impact_multiplier)
+		var game_node: Node = get_tree().get_first_node_in_group("game")
+		if game_node != null:
+			game_node.call("add_screen_shake", 4.2 if impact_multiplier > 1.0 else 2.8, 0.12)
 		attack_cooldown = 0.86
 
 func _animate_parts(delta: float) -> void:
@@ -168,7 +186,6 @@ func _animate_parts(delta: float) -> void:
 	if is_instance_valid(_tail_art): _tail_art.position = Vector2(-1.3 if swing > 0.35 else 0.0, 0.0)
 
 func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
-	visual.modulate = _base_modulate
 	if distance > 295.0:
 		velocity = to_player * move_speed
 	elif distance < 175.0:
@@ -200,7 +217,6 @@ func _move_charger(delta: float, to_player: Vector2, distance: float) -> void:
 			_charge_direction = to_player
 			_charge_active = 0.58
 		return
-	visual.modulate = _base_modulate
 	_charge_cooldown -= delta
 	velocity = to_player * move_speed
 	if _charge_cooldown <= 0.0 and distance < 480.0:
