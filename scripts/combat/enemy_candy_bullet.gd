@@ -4,8 +4,9 @@ extends Node2D
 var velocity: Vector2 = Vector2.ZERO
 var damage: float = 7.0
 var life: float = 4.0
-var hit_radius: float = 11.0
-var perfect_radius: float = 25.0
+var hit_radius: float = 14.0
+var perfect_radius: float = 30.0
+var _pulse: float = 0.0
 
 func configure(origin: Vector2, direction: Vector2, amount: float, speed: float) -> void:
 	global_position = origin
@@ -13,11 +14,14 @@ func configure(origin: Vector2, direction: Vector2, amount: float, speed: float)
 	damage = amount
 	rotation = direction.angle()
 	z_index = 18
+	_pulse = randf() * TAU
 	queue_redraw()
 
 func _process(delta: float) -> void:
 	position += velocity * delta
 	life -= delta
+	_pulse = fmod(_pulse + delta * 10.0, TAU)
+	scale = Vector2.ONE * (1.0 + sin(_pulse) * 0.05)
 	if life <= 0.0:
 		queue_free()
 		return
@@ -41,11 +45,12 @@ func _draw() -> void:
 	var hot: Color = Color("ff477f")
 	var pale: Color = Color("ffd3e2")
 	var yellow: Color = Color("ffd95f")
-	# Tiny hostile candy diamond. Cute silhouette, dangerous palette.
-	draw_rect(Rect2(-4, -2, 8, 4), ink)
-	draw_rect(Rect2(-2, -4, 4, 8), ink)
-	draw_rect(Rect2(-3, -1, 6, 2), hot)
-	draw_rect(Rect2(-1, -3, 2, 6), hot)
-	draw_rect(Rect2(-1, -1, 2, 2), pale)
-	draw_rect(Rect2(-6, -1, 2, 2), yellow)
-	draw_rect(Rect2(4, -1, 2, 2), yellow)
+	# Larger hostile candy projectile so danger reads immediately in the chaos.
+	draw_circle(Vector2.ZERO, 10.0, Color(1.45, 0.16, 0.72, 0.12))
+	draw_rect(Rect2(-6, -3, 12, 6), ink)
+	draw_rect(Rect2(-3, -6, 6, 12), ink)
+	draw_rect(Rect2(-5, -2, 10, 4), hot)
+	draw_rect(Rect2(-2, -5, 4, 10), hot)
+	draw_rect(Rect2(-2, -2, 4, 4), pale)
+	draw_rect(Rect2(-9, -2, 3, 4), yellow)
+	draw_rect(Rect2(6, -2, 3, 4), yellow)

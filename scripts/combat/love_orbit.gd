@@ -10,8 +10,8 @@ var _normal_texture: Texture2D
 var _evolved_texture: Texture2D
 
 func _ready() -> void:
-	_normal_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoRosaMoldura.png", Vector2i(8, 8))
-	_evolved_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoAlado.png", Vector2i(11, 11))
+	_normal_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoRosaMoldura.png", Vector2i(15, 15))
+	_evolved_texture = CutoutArtPart.make_small_texture("res://assets/fx/CoracaoAlado.png", Vector2i(20, 20))
 
 func configure(player: TaffiController, level_value: int, is_evolved: bool) -> void:
 	owner_player = player
@@ -28,7 +28,7 @@ func _process(delta: float) -> void:
 		queue_free()
 		return
 	global_position = owner_player.global_position
-	_angle = fmod(_angle + delta * (2.25 + float(orbit_level) * 0.08), TAU)
+	_angle = fmod(_angle + delta * (2.05 + float(orbit_level) * 0.07), TAU)
 	_tick_timer -= delta
 	if _tick_timer <= 0.0:
 		_tick_timer = 0.11
@@ -41,6 +41,7 @@ func _damage_nearby() -> void:
 	var damage_amount: float = owner_player.damage * (0.34 + float(orbit_level) * 0.075) * owner_player.get_cute_damage_multiplier()
 	if evolved:
 		damage_amount *= 1.35
+	var hit_radius: float = 26.0 if evolved else 22.0
 	for enemy_node: Node in get_tree().get_nodes_in_group("enemy"):
 		var enemy: Node2D = enemy_node as Node2D
 		if enemy == null or not is_instance_valid(enemy):
@@ -48,7 +49,7 @@ func _damage_nearby() -> void:
 		for i: int in count:
 			var phase: float = _angle + TAU * float(i) / float(count)
 			var orb_pos: Vector2 = global_position + Vector2.RIGHT.rotated(phase) * radius
-			if orb_pos.distance_squared_to(enemy.global_position) <= 16.0 * 16.0:
+			if orb_pos.distance_squared_to(enemy.global_position) <= hit_radius * hit_radius:
 				enemy.call("take_damage", damage_amount, orb_pos.direction_to(enemy.global_position), false)
 				break
 
@@ -58,7 +59,7 @@ func _orb_count() -> int:
 	return mini(5, 2 + floori(float(orbit_level) * 0.75))
 
 func _orbit_radius() -> float:
-	return 67.0 + float(orbit_level) * 2.5 + (8.0 if evolved else 0.0)
+	return 82.0 + float(orbit_level) * 3.6 + (12.0 if evolved else 0.0)
 
 func _draw() -> void:
 	var count: int = _orb_count()
@@ -70,4 +71,7 @@ func _draw() -> void:
 	for i: int in count:
 		var phase: float = _angle + TAU * float(i) / float(count)
 		var p: Vector2 = Vector2.RIGHT.rotated(phase) * radius
+		var glow_radius: float = 14.0 if evolved else 11.0
+		draw_circle(p, glow_radius, Color(1.55, 0.18, 0.72, 0.16))
+		draw_circle(p, glow_radius * 0.62, Color(1.35, 0.58, 1.0, 0.14))
 		draw_texture(texture, p - texture_size * 0.5)
