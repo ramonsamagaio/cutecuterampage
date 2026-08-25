@@ -10,6 +10,9 @@ var streamer: ChunkStreamer
 var director: EnemyDirector
 var love_orbit: LoveOrbit
 var current_boss: SugarBoss
+var _camera_shake_strength: float = 0.0
+var _camera_shake_time: float = 0.0
+var _camera_shake_duration: float = 0.0
 
 func _ready() -> void:
 	add_to_group("game")
@@ -34,16 +37,38 @@ func _ready() -> void:
 	add_child(hud)
 	hud.bind(player, self)
 
+func _process(delta: float) -> void:
+	if not is_instance_valid(player):
+		return
+	var camera: Camera2D = player.get_node_or_null("Camera2D") as Camera2D
+	if camera == null:
+		return
+	if _camera_shake_time > 0.0:
+		_camera_shake_time = maxf(0.0, _camera_shake_time - delta)
+		var life_ratio: float = _camera_shake_time / maxf(0.001, _camera_shake_duration)
+		var current_strength: float = _camera_shake_strength * clampf(life_ratio, 0.0, 1.0)
+		camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * current_strength
+	else:
+		_camera_shake_strength = 0.0
+		camera.offset = camera.offset.lerp(Vector2.ZERO, minf(1.0, delta * 18.0))
+
+func add_screen_shake(strength: float, duration: float = 0.12) -> void:
+	_camera_shake_strength = maxf(_camera_shake_strength, strength)
+	_camera_shake_time = maxf(_camera_shake_time, duration)
+	_camera_shake_duration = maxf(_camera_shake_duration, duration)
+	if _camera_shake_time == duration:
+		_camera_shake_duration = duration
+
 func _setup_vfx_environment() -> void:
 	var world_environment: WorldEnvironment = WorldEnvironment.new()
 	world_environment.name = "CuteCuteVFXEnvironment"
 	var environment_resource: Environment = Environment.new()
 	environment_resource.glow_enabled = true
-	environment_resource.glow_intensity = 0.92
-	environment_resource.glow_bloom = 0.10
-	environment_resource.glow_hdr_threshold = 0.78
-	environment_resource.glow_hdr_scale = 2.0
-	environment_resource.glow_strength = 1.10
+	environment_resource.glow_intensity = 1.28
+	environment_resource.glow_bloom = 0.18
+	environment_resource.glow_hdr_threshold = 0.62
+	environment_resource.glow_hdr_scale = 2.45
+	environment_resource.glow_strength = 1.34
 	environment_resource.glow_normalized = false
 	world_environment.environment = environment_resource
 	add_child(world_environment)
@@ -85,14 +110,14 @@ func spawn_projectile(origin: Vector2, direction: Vector2, damage_amount: float,
 	var projectile: CuteProjectile = CuteProjectile.new()
 	add_child(projectile)
 	projectile.configure(origin, direction, damage_amount, kind, pierce, speed)
-	if randf() < 0.42:
-		spawn_cute_fx(origin, "muzzle", direction, 0.75)
+	if randf() < 0.68:
+		spawn_cute_fx(origin, "muzzle", direction, 0.95)
 
 func spawn_cupcake_mortar(origin: Vector2, target: Vector2, damage_amount: float, radius: float, evolved: bool) -> void:
 	var mortar: CupcakeMortar = CupcakeMortar.new()
 	add_child(mortar)
 	mortar.configure(origin, target, damage_amount, radius, evolved)
-	spawn_cute_fx(origin, "heart", origin.direction_to(target), 0.8)
+	spawn_cute_fx(origin, "heart", origin.direction_to(target), 1.0)
 
 func explode_cupcake(center: Vector2, damage_amount: float, radius: float, evolved: bool) -> void:
 	var enemy_nodes: Array[Node] = []
@@ -106,9 +131,10 @@ func explode_cupcake(center: Vector2, damage_amount: float, radius: float, evolv
 		if distance <= radius:
 			var falloff: float = lerpf(1.0, 0.58, clampf(distance / maxf(1.0, radius), 0.0, 1.0))
 			enemy.call("take_damage", damage_amount * falloff, center.direction_to(enemy.global_position), distance < radius * 0.35)
-	blood.emit_burst(center, Vector2.UP, 13 if evolved else 7)
-	spawn_cute_fx(center, "puff", Vector2.UP, 1.35 if evolved else 1.0)
-	spawn_cute_fx(center, "impact", Vector2.ZERO, 1.55 if evolved else 1.1)
+	blood.emit_burst(center, Vector2.UP, 18 if evolved else 11)
+	spawn_cute_fx(center, "puff", Vector2.UP, 1.65 if evolved else 1.25)
+	spawn_cute_fx(center, "impact", Vector2.ZERO, 1.85 if evolved else 1.4)
+	add_screen_shake(8.5 if evolved else 5.5, 0.18 if evolved else 0.13)
 	if evolved:
 		for i: int in 10:
 			var angle: float = TAU * float(i) / 10.0
@@ -130,62 +156,73 @@ func spawn_enemy_projectile(origin: Vector2, direction: Vector2, damage_amount: 
 
 func spawn_cute_fx(global_pos: Vector2, kind: String, direction: Vector2 = Vector2.ZERO, size_multiplier: float = 1.0) -> void:
 	var active_fx_count: int = get_tree().get_nodes_in_group("cute_fx").size()
-	if active_fx_count >= 140:
+	if active_fx_count >= 180:
 		return
 	var path: String = "res://assets/fx/BrilhoRosa.png"
-	var target_size: Vector2 = Vector2(12, 12)
-	var lifetime: float = 0.22
-	var drift: Vector2 = direction.normalized() * 28.0
-	var spin: float = randf_range(-2.5, 2.5)
-	var end_scale: float = 1.25
+	var target_size: Vector2 = Vector2(17, 17)
+	var lifetime: float = 0.24
+	var drift: Vector2 = direction.normalized() * 34.0
+	var spin: float = randf_range(-3.1, 3.1)
+	var end_scale: float = 1.35
 	match kind:
 		"impact":
 			path = "res://assets/fx/ImpactoRosa.png"
-			target_size = Vector2(15, 15)
-			lifetime = 0.18
-			end_scale = 1.42
+			target_size = Vector2(23, 23)
+			lifetime = 0.20
+			end_scale = 1.58
 		"crit":
 			path = "res://assets/fx/BrilhoDourado.png"
-			target_size = Vector2(19, 19)
-			lifetime = 0.28
-			end_scale = 1.55
+			target_size = Vector2(31, 31)
+			lifetime = 0.31
+			end_scale = 1.75
 		"kill":
 			path = "res://assets/fx/PufffRosa.png"
-			target_size = Vector2(18, 18)
-			lifetime = 0.30
-			drift = Vector2(0, -16)
-			end_scale = 1.45
+			target_size = Vector2(28, 28)
+			lifetime = 0.34
+			drift = Vector2(0, -19)
+			end_scale = 1.62
 		"heart":
 			path = "res://assets/fx/CoracaoAlado.png"
-			target_size = Vector2(15, 15)
-			lifetime = 0.42
-			drift = Vector2(randf_range(-15, 15), -34)
+			target_size = Vector2(22, 22)
+			lifetime = 0.46
+			drift = Vector2(randf_range(-18, 18), -38)
 		"strawberry":
 			path = "res://assets/fx/MorangoFull.png"
-			target_size = Vector2(14, 14)
-			lifetime = 0.46
-			drift = Vector2(randf_range(-26, 26), randf_range(-42, -18))
+			target_size = Vector2(20, 20)
+			lifetime = 0.50
+			drift = Vector2(randf_range(-30, 30), randf_range(-46, -20))
 		"powerup":
 			path = "res://assets/fx/CoracaoRosaMoldura.png"
-			target_size = Vector2(22, 22)
-			lifetime = 0.58
-			drift = Vector2(0, -24)
-			end_scale = 1.65
+			target_size = Vector2(30, 30)
+			lifetime = 0.62
+			drift = Vector2(0, -28)
+			end_scale = 1.82
 		"puff":
 			path = "res://assets/fx/PufffRosa.png"
-			target_size = Vector2(22, 22)
-			lifetime = 0.32
+			target_size = Vector2(34, 34)
+			lifetime = 0.36
 			drift = Vector2.ZERO
-			end_scale = 1.65
+			end_scale = 1.82
 		"muzzle":
 			path = "res://assets/fx/BrilhoRosa.png"
-			target_size = Vector2(10, 10)
-			lifetime = 0.12
-			drift = direction.normalized() * 18.0
-			end_scale = 1.28
+			target_size = Vector2(16, 16)
+			lifetime = 0.13
+			drift = direction.normalized() * 24.0
+			end_scale = 1.42
 	var fx: CuteFX = CuteFX.new()
 	add_child(fx)
 	fx.configure(global_pos, path, target_size * size_multiplier, lifetime, drift, spin, 0.72, end_scale)
+
+func on_enemy_hit_feedback(pos: Vector2, is_critical: bool, amount: float) -> void:
+	var shake: float = 2.0 + minf(2.2, amount * 0.035)
+	if is_critical:
+		shake += 3.4
+	add_screen_shake(shake, 0.105 if not is_critical else 0.15)
+	if is_critical:
+		spawn_cute_fx(pos, "crit", Vector2.ZERO, 1.35)
+		spawn_cute_fx(pos + Vector2(randf_range(-9, 9), randf_range(-9, 2)), "impact", Vector2.ZERO, 1.0)
+	elif randf() < 0.34:
+		spawn_cute_fx(pos, "impact", Vector2.ZERO, 0.86)
 
 func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -> void:
 	player.register_kill()
@@ -195,11 +232,13 @@ func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -
 	orb.value = maxi(1, roundi(float(xp_value) * player.get_cute_xp_multiplier()))
 	orb.global_position = pos
 	add_child.call_deferred(orb)
-	spawn_cute_fx(pos, "kill", Vector2.UP, 1.15 if was_elite else 0.85)
-	if randf() < (0.38 if was_elite else 0.14):
-		spawn_cute_fx(pos + Vector2(randf_range(-8, 8), -5), "heart", Vector2.UP, 1.0)
-	if player.cute_meter >= 75.0 and randf() < 0.22:
-		spawn_cute_fx(pos + Vector2(randf_range(-10, 10), 0), "strawberry", Vector2.UP, 1.0)
+	spawn_cute_fx(pos, "kill", Vector2.UP, 1.45 if was_elite else 1.05)
+	spawn_cute_fx(pos + Vector2(randf_range(-10, 10), -7), "impact", Vector2.ZERO, 0.78)
+	add_screen_shake(6.2 if was_elite else 3.6, 0.17 if was_elite else 0.115)
+	if randf() < (0.48 if was_elite else 0.20):
+		spawn_cute_fx(pos + Vector2(randf_range(-8, 8), -5), "heart", Vector2.UP, 1.1)
+	if player.cute_meter >= 75.0 and randf() < 0.27:
+		spawn_cute_fx(pos + Vector2(randf_range(-10, 10), 0), "strawberry", Vector2.UP, 1.05)
 	if was_elite and randf() < 0.085:
 		spawn_reward_chest(pos, false)
 
@@ -212,6 +251,7 @@ func spawn_boss(power: float) -> void:
 	var angle: float = randf_range(0.0, TAU)
 	current_boss.global_position = player.global_position + Vector2.RIGHT.rotated(angle) * 610.0
 	add_child(current_boss)
+	add_screen_shake(8.0, 0.28)
 	if hud != null:
 		hud.show_reward_toast("WARNING!  QUEEN MALLOW HAS ARRIVED")
 
@@ -219,9 +259,10 @@ func on_boss_defeated(pos: Vector2, defeated_name: String) -> void:
 	current_boss = null
 	player.cute_meter = minf(100.0, player.cute_meter + 28.0)
 	player.special_meter = minf(100.0, player.special_meter + 35.0)
-	spawn_cute_fx(pos, "crit", Vector2.ZERO, 2.5)
-	spawn_cute_fx(pos + Vector2(-24, -12), "heart", Vector2.UP, 1.8)
-	spawn_cute_fx(pos + Vector2(24, -6), "strawberry", Vector2.UP, 1.8)
+	spawn_cute_fx(pos, "crit", Vector2.ZERO, 3.1)
+	spawn_cute_fx(pos + Vector2(-24, -12), "heart", Vector2.UP, 2.1)
+	spawn_cute_fx(pos + Vector2(24, -6), "strawberry", Vector2.UP, 2.1)
+	add_screen_shake(13.0, 0.34)
 	spawn_reward_chest(pos, true)
 	if hud != null:
 		hud.show_reward_toast("%s POPPED!  EVOLUTION CHEST!" % defeated_name)
@@ -238,8 +279,9 @@ func claim_reward_chest(_pos: Vector2, legendary: bool) -> void:
 		reward_text = player.claim_evolution_chest()
 	else:
 		reward_text = player.claim_bonus_chest()
-	spawn_cute_fx(player.global_position + Vector2(0, -28), "powerup", Vector2.UP, 1.55 if legendary else 1.0)
-	spawn_cute_fx(player.global_position + Vector2(18, -18), "crit", Vector2.ZERO, 1.15 if legendary else 0.75)
+	spawn_cute_fx(player.global_position + Vector2(0, -28), "powerup", Vector2.UP, 1.75 if legendary else 1.15)
+	spawn_cute_fx(player.global_position + Vector2(18, -18), "crit", Vector2.ZERO, 1.35 if legendary else 0.85)
+	add_screen_shake(5.5 if legendary else 2.8, 0.16)
 	if hud != null:
 		hud.show_reward_toast(reward_text)
 
@@ -267,6 +309,7 @@ func trigger_special(fallback_origin: Vector2) -> void:
 	elif player.visual.scale.x < 0.0:
 		beam_direction = Vector2.LEFT
 	player.begin_special_channel()
+	add_screen_shake(8.5, 0.24)
 	var beam: TaffiStrawberryBeamVFX = TaffiStrawberryBeamVFX.new()
 	beam.name = "TaffiStrawberryOverdrive"
 	add_child(beam)
