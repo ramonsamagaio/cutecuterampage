@@ -24,6 +24,7 @@ func configure(global_pos: Vector2, texture_path: String, target_size: Vector2, 
 	art = CutoutArtPart.new()
 	art.name = "FXArt"
 	art.configure(texture_path, target_size, Vector2(0.5, 0.5))
+	art.modulate = Color(1.42, 1.10, 1.34, 1.0)
 	add_child(art)
 	scale = Vector2.ONE * start_scale
 
@@ -32,8 +33,9 @@ func _process(delta: float) -> void:
 	position += drift * delta
 	rotation += spin_speed * delta
 	var t: float = clampf(age / lifetime, 0.0, 1.0)
-	var s: float = lerpf(start_scale, end_scale, t)
+	var eased: float = 1.0 - pow(1.0 - t, 3.0)
+	var s: float = lerpf(start_scale, end_scale, eased)
 	scale = Vector2.ONE * s
-	modulate.a = 1.0 - smoothstep(0.55, 1.0, t)
+	modulate.a = 1.0 - smoothstep(0.58, 1.0, t)
 	if age >= lifetime:
 		queue_free()
