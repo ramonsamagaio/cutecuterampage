@@ -12,6 +12,8 @@ var _slot_style: StyleBoxFlat
 var _special_style: StyleBoxFlat
 var _pill_style: StyleBoxFlat
 var _badge_style: StyleBoxFlat
+var _time: float = 0.0
+var _shine_tick: float = 0.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -35,6 +37,13 @@ func _ready() -> void:
 	_pill_style = _make_style(Color(0.15, 0.05, 0.15, 0.88), Color("ff9cc4"), 20, 2, Color(0.04, 0.01, 0.04, 0.34), 5)
 	_badge_style = _make_style(Color("5b2448"), Color("ffc1da"), 10, 2, Color(0.04, 0.01, 0.04, 0.24), 3)
 	queue_redraw()
+
+func _process(delta: float) -> void:
+	_time += delta
+	_shine_tick -= delta
+	if _shine_tick <= 0.0:
+		_shine_tick = 0.12
+		queue_redraw()
 
 func _make_style(bg: Color, border: Color, radius: int, border_width: int, shadow: Color, shadow_size: int) -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
@@ -74,6 +83,12 @@ func _draw() -> void:
 		var x: float = 112.0 + float(i) * 30.0
 		draw_rect(Rect2(x, 77, 1, 5), Color(1.0, 0.78, 0.88, 0.18))
 
+	# Tiny moving candy glints animate the otherwise static HUD at only ~8 Hz.
+	var hp_shine_x: float = 112.0 + fmod(_time * 39.0, 232.0)
+	draw_line(Vector2(hp_shine_x, 31), Vector2(hp_shine_x + 8, 47), Color(1.35, 1.0, 1.25, 0.20), 2.0, true)
+	var cute_shine_x: float = 112.0 + fmod(_time * 29.0 + 71.0, 230.0)
+	draw_line(Vector2(cute_shine_x, 75), Vector2(cute_shine_x + 5, 82), Color(1.25, 0.88, 1.10, 0.16), 1.5, true)
+
 	# Loadout strip, with a tiny status light under each card and a selected-slot glow.
 	for i: int in 5:
 		var slot_pos: Vector2 = Vector2(18.0 + float(i) * 55.0, 170.0)
@@ -84,7 +99,8 @@ func _draw() -> void:
 		var led: Color = Color("ff78ad") if i == 0 else Color(0.98, 0.68, 0.80, 0.24)
 		draw_circle(slot_pos + Vector2(24.5, 45.0), 2.1, led)
 		if i == 0:
-			draw_arc(slot_pos + Vector2(24.5, 24.5), 20.0, 0.2, PI * 1.8, 18, Color(1.35, 0.42, 0.78, 0.28), 2.0, true)
+			var selected_pulse: float = 0.22 + sin(_time * 3.1) * 0.05
+			draw_arc(slot_pos + Vector2(24.5, 24.5), 20.0, 0.2, PI * 1.8, 18, Color(1.35, 0.42, 0.78, selected_pulse), 2.0, true)
 
 	# Combo and kill counters float like enamel badges.
 	draw_style_box(_pill_style, Rect2(493, 24, 294, 64))
@@ -101,6 +117,8 @@ func _draw() -> void:
 	for i: int in 10:
 		var x: float = 940.0 + float(i) * 30.0
 		draw_rect(Rect2(x, 619, 2, 17), Color(1.0, 0.82, 0.90, 0.15))
+	var special_shine_x: float = 940.0 + fmod(_time * 52.0, 296.0)
+	draw_line(Vector2(special_shine_x, 620), Vector2(special_shine_x + 11, 634), Color(1.5, 1.02, 1.30, 0.20), 2.2, true)
 	_draw_heart(Vector2(1237, 585), 0.86, 0.95)
 	_draw_spark(Vector2(898, 581), Color("ffacd0"), 7.0)
 	_draw_spark(Vector2(1262, 550), Color("fff0a3"), 7.0)
