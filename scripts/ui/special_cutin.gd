@@ -123,7 +123,6 @@ func _draw() -> void:
 		return
 	var w: float = size.x
 	var h: float = size.y
-	var t: float = clampf(elapsed / DURATION, 0.0, 1.0)
 	var intro: float = clampf(elapsed / 0.30, 0.0, 1.0)
 	var eased: float = _ease_out_cubic(intro)
 	var exit_alpha: float = 1.0 - smoothstep(DURATION - 0.17, DURATION, elapsed)
@@ -155,12 +154,10 @@ func _draw() -> void:
 	])
 	draw_colored_polygon(inner, Color(1.0, 0.31, 0.64, 0.79 * exit_alpha))
 
-	# Creamy edge stripes sell arcade packaging / anime cel design.
 	for i: int in 3:
 		var y_shift: float = float(i) * 9.0
 		draw_line(Vector2(-20, top_y + 72 + y_shift), Vector2(w + 40, top_y - 4 + y_shift), Color(1.0, 0.87, 0.94, 0.54 * exit_alpha), 2.0, true)
 
-	# Speed lines accelerate behind Taffi, then become a slow drift after the initial hit.
 	var line_scroll: float = fmod(elapsed * 820.0, 150.0)
 	for i: int in 24:
 		var seed: float = float((i * 71) % 101) / 101.0
@@ -171,7 +168,6 @@ func _draw() -> void:
 		var c: Color = Color(1.35, 0.77, 1.08, (0.14 + float(i % 4) * 0.035) * exit_alpha)
 		draw_line(Vector2(x, y), Vector2(x + length, y - length * 0.08), c, thickness, true)
 
-	# Decorative hearts/sparkles are sparse and authored, not confetti soup.
 	for i: int in 10:
 		var a: float = float(i) * 0.91 + elapsed * 0.8
 		var p: Vector2 = Vector2(w * 0.52, h * 0.48) + Vector2(cos(a) * (250.0 + float(i % 3) * 40.0), sin(a * 1.13) * (150.0 + float(i % 2) * 28.0))
@@ -180,7 +176,6 @@ func _draw() -> void:
 		else:
 			_draw_heart(p, 0.56 + float(i % 3) * 0.10, Color(1.0, 0.30, 0.64, 0.40 * exit_alpha))
 
-	# Taffi arrives fast, eases hard, then drifts only a few pixels like a fighting-game super portrait.
 	var portrait_x: float = lerpf(-w * 0.44, w * 0.285, eased) + maxf(0.0, elapsed - 0.30) * 7.0
 	var portrait_y: float = h * 0.56 + sin(elapsed * 2.2) * 2.5
 	var pulse: float = 1.0 + sin(elapsed * 7.0) * 0.006
@@ -188,14 +183,12 @@ func _draw() -> void:
 	var registered_center: Vector2 = Vector2(portrait_x, portrait_y)
 	var registered_rect: Rect2 = Rect2(registered_center - registered_size * 0.5, registered_size)
 
-	# Soft silhouette offset gives the collage a hand-inked cel separation from the band.
-	var shadow_rect: Rect2 = registered_rect.translated(Vector2(8, 7))
+	var shadow_rect: Rect2 = Rect2(registered_rect.position + Vector2(8, 7), registered_rect.size)
 	_draw_registered_layer(_body_texture, shadow_rect, Color(0.18, 0.02, 0.15, 0.40 * exit_alpha))
 	_draw_registered_layer(_ear1_texture, shadow_rect, Color(0.18, 0.02, 0.15, 0.40 * exit_alpha))
 	_draw_registered_layer(_ear2_texture, shadow_rect, Color(0.18, 0.02, 0.15, 0.40 * exit_alpha))
 	_draw_registered_layer(_head_texture, shadow_rect, Color(0.18, 0.02, 0.15, 0.40 * exit_alpha))
 
-	# Registered layers preserve the original Photoshop alignment, fixing the disconnected arm/body problem.
 	_draw_registered_layer(_body_texture, registered_rect)
 	_draw_registered_layer(_ear1_texture, registered_rect)
 	_draw_registered_layer(_ear2_texture, registered_rect)
@@ -204,7 +197,6 @@ func _draw() -> void:
 	_draw_registered_layer(_hand_texture, registered_rect)
 	_draw_registered_layer(_bow_texture, registered_rect)
 
-	# Dedicated special cannon art sits over the registered hand with a deliberate grip alignment.
 	if _cannon_texture != null:
 		var cannon_center: Vector2 = registered_center + Vector2(146, 112)
 		var cannon_size: Vector2 = Vector2(360, 166)
@@ -213,7 +205,6 @@ func _draw() -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		_draw_muzzle_star(cannon_center + Vector2(168, -11), exit_alpha)
 
-	# White graphic slash on the bottom edge, then a tiny pink echo line.
 	draw_line(Vector2(w * 0.04, h * 0.79), Vector2(w * 0.96, h * 0.70), Color(1.0, 0.94, 0.98, 0.76 * exit_alpha), 4.0, true)
 	draw_line(Vector2(w * 0.10, h * 0.81), Vector2(w * 0.86, h * 0.745), Color(1.0, 0.35, 0.66, 0.76 * exit_alpha), 2.0, true)
 
