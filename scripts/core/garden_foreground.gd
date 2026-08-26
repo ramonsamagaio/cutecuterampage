@@ -40,7 +40,12 @@ func _draw_tall_flower_cluster(p: Vector2, rng: RandomNumberGenerator) -> void:
 		var stem_color: Color = Color("397f42")
 		draw_line(p + Vector2(x, 12), p + Vector2(x * 0.82, 12 - height), stem_color, 3.0)
 		var flower_center: Vector2 = p + Vector2(x * 0.82, 12 - height)
-		var petal: Color = [Color("ff85b8"), Color("ffcf70"), Color("a9a0ff"), Color("8fdcff")][rng.randi_range(0, 3)]
+		var petal: Color = Color("ff85b8")
+		match rng.randi_range(0, 3):
+			1: petal = Color("ffcf70")
+			2: petal = Color("a9a0ff")
+			3: petal = Color("8fdcff")
+			_: petal = Color("ff85b8")
 		draw_circle(flower_center + Vector2(-5, 0), 5.0, petal.darkened(0.05))
 		draw_circle(flower_center + Vector2(5, 0), 5.0, petal)
 		draw_circle(flower_center + Vector2(0, -5), 5.0, petal.lightened(0.05))
@@ -58,7 +63,8 @@ func _draw_leaf_canopy(p: Vector2, rng: RandomNumberGenerator) -> void:
 	for i: int in 9:
 		var q: Vector2 = p + Vector2(rng.randf_range(-30.0, 30.0), rng.randf_range(-18.0, 18.0))
 		var radius: float = rng.randf_range(10.0, 18.0)
-		draw_circle(q, radius, dark if i < 3 else mid)
+		var canopy_color: Color = dark if i < 3 else mid
+		draw_circle(q, radius, canopy_color)
 		if i >= 4:
 			draw_circle(q + Vector2(-3, -4), radius * 0.48, light)
 	if rng.randf() < 0.58:
