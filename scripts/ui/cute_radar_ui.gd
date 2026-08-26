@@ -50,7 +50,6 @@ func _draw() -> void:
 	_draw_pixel_frame(rect)
 	var inner: Rect2 = Rect2(rect.position + Vector2(9, 22), rect.size - Vector2(18, 31))
 
-	# Quiet garden grid gives the radar spatial scale without pretending this is a full map system.
 	draw_rect(inner, Color("315f37"))
 	for i: int in 6:
 		var x: float = inner.position.x + inner.size.x * float(i) / 5.0
@@ -59,7 +58,6 @@ func _draw() -> void:
 		var y: float = inner.position.y + inner.size.y * float(i) / 4.0
 		draw_line(Vector2(inner.position.x, y), Vector2(inner.end.x, y), Color(0.56, 0.82, 0.51, 0.10), 1.0)
 
-	# A couple of fixed flower flecks keep the display from reading like debug radar.
 	for i: int in 10:
 		var seed_x: float = float((i * 47 + 13) % 101) / 101.0
 		var seed_y: float = float((i * 71 + 9) % 97) / 97.0
@@ -74,7 +72,7 @@ func _draw() -> void:
 			continue
 		var p: Vector2 = center + Vector2(offset.x * half.x, offset.y * half.y)
 		var is_boss: bool = enemy.is_in_group("boss")
-		var is_elite: bool = enemy.is_in_group("elite") or bool(enemy.get("elite"))
+		var is_elite: bool = enemy.is_in_group("elite")
 		if is_boss:
 			draw_circle(p, 4.0, Color("fff08d"))
 			draw_circle(p, 2.0, Color("ff4f8f"))
@@ -92,14 +90,12 @@ func _draw() -> void:
 			var p: Vector2 = center + Vector2(offset.x * half.x, offset.y * half.y)
 			_draw_spark(p, 3.5 + sin(_time * 4.0) * 0.7, Color("fff0a0"))
 
-	# Player marker is intentionally the strongest icon.
 	draw_circle(center, 4.5, Color("fff2f7"))
 	draw_circle(center, 2.7, Color("ff58a0"))
 	_draw_heart(center + Vector2(0, -1), 0.34, Color("fff2f7"))
 
 	_draw_text(rect.position + Vector2(10, 16), "SWEET RADAR", 10, Color("ffd0e2"))
 	_draw_text(rect.position + Vector2(112, 16), "♡", 11, Color("fff0a0"))
-	# tiny corner hotkey badge for the reference-style map cartridge feel
 	draw_rect(Rect2(rect.end - Vector2(23, 22), Vector2(15, 14)), Color("fff1f7"))
 	draw_rect(Rect2(rect.end - Vector2(21, 20), Vector2(11, 10)), Color("30142d"))
 	_draw_text(rect.end - Vector2(19, 11), "M", 8, Color("fff2f7"))
