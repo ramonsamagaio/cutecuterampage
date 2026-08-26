@@ -10,7 +10,8 @@ func configure(coord: Vector2i, size_px: int) -> void:
 	chunk_pixels = size_px
 	seed_value = absi((coord.x * 51619717) ^ (coord.y * 1103515245) ^ 0x72B9)
 	z_as_relative = false
-	z_index = 5
+	# Above Taffi body/weapon, below XP/projectiles: real foreground occlusion without hiding combat reads.
+	z_index = 7
 	queue_redraw()
 
 func _draw() -> void:
