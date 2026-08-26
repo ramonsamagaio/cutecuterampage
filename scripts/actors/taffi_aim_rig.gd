@@ -57,8 +57,13 @@ func _process(delta: float) -> void:
 	var local_dir: Vector2 = _aim_direction
 	if facing < 0.0:
 		local_dir.x *= -1.0
-	var target_angle: float = clampf(local_dir.angle(), -max_aim_angle, max_aim_angle)
-	var weight: float = minf(1.0, delta * aim_speed)
+	var active_max_angle: float = 1.08 if _taffi.special_channeling else max_aim_angle
+	var target_angle: float = clampf(local_dir.angle(), -active_max_angle, active_max_angle)
+	var weight: float = minf(1.0, delta * (24.0 if _taffi.special_channeling else aim_speed))
 	_arm_weapon.rotation = lerp_angle(_arm_weapon.rotation, target_angle, weight)
-	var support_target: float = target_angle * support_arm_weight + 0.035
-	_arm_support.rotation = lerp_angle(_arm_support.rotation, support_target, weight * 0.92)
+
+	# The special is visibly two-handed: the support arm follows the cannon much more closely.
+	var active_support_weight: float = 0.90 if _taffi.special_channeling else support_arm_weight
+	var support_bias: float = -0.015 if _taffi.special_channeling else 0.035
+	var support_target: float = target_angle * active_support_weight + support_bias
+	_arm_support.rotation = lerp_angle(_arm_support.rotation, support_target, weight * 0.94)
