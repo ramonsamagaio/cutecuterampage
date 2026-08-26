@@ -24,8 +24,8 @@ static func load_original_texture(path: String) -> Texture2D:
 		_original_cache[path] = source_texture
 	return source_texture
 
-# Standalone art (weapons, FX, HUD) is allowed to trim transparent margins and bake
-# a tiny nearest-neighbour texture. Registered character body layers never call this.
+# Standalone art is baked once and cached. Lanczos keeps the supplied illustration
+# clean when reduced for HUD/projectiles, instead of creating the crunchy AI/pixel read.
 static func make_small_texture(path: String, max_size: Vector2i) -> Texture2D:
 	if path.is_empty() or not ResourceLoader.exists(path):
 		return null
@@ -49,7 +49,7 @@ static func make_small_texture(path: String, max_size: Vector2i) -> Texture2D:
 	var ratio: float = minf(ratio_x, ratio_y)
 	var baked_width: int = maxi(1, roundi(float(cropped.get_width()) * ratio))
 	var baked_height: int = maxi(1, roundi(float(cropped.get_height()) * ratio))
-	cropped.resize(baked_width, baked_height, Image.INTERPOLATE_NEAREST)
+	cropped.resize(baked_width, baked_height, Image.INTERPOLATE_LANCZOS)
 	var baked_texture: ImageTexture = ImageTexture.create_from_image(cropped)
 	_standalone_cache[cache_key] = baked_texture
 	return baked_texture
@@ -71,7 +71,7 @@ func _ensure_sprite() -> void:
 	sprite = Sprite2D.new()
 	sprite.name = "Art"
 	sprite.centered = true
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(sprite)
 
 func _rebuild() -> void:
@@ -86,7 +86,7 @@ func _rebuild() -> void:
 	sprite.visible = true
 
 	# Registered body-part PNGs keep their complete transparent canvas. Every part is
-	# scaled by the exact same full-canvas factor, so Photoshop registration survives.
+	# scaled by the same full-canvas factor so Photoshop registration survives.
 	var source_size: Vector2 = original_texture.get_size()
 	var fit: float = RegisteredTextureMath.fit_scale(original_texture, target_size)
 	sprite.scale = Vector2.ONE * fit
@@ -97,7 +97,7 @@ func _rebuild() -> void:
 
 func add_blood_stain(local_pos: Vector2 = Vector2.ZERO) -> void:
 	blood_stains.append(local_pos)
-	if blood_stains.size() > 10:
+	if blood_stains.size() > 8:
 		blood_stains.pop_front()
 	queue_redraw()
 
@@ -109,5 +109,5 @@ func add_random_blood_stain(amount: int = 1) -> void:
 
 func _draw() -> void:
 	for stain: Vector2 in blood_stains:
-		draw_rect(Rect2(stain - Vector2(2.0, 1.5), Vector2(4.0, 3.0)), Color("9e092c"))
-		draw_rect(Rect2(stain + Vector2(1.0, 1.0), Vector2(2.0, 2.0)), Color("e32642"))
+		draw_circle(stain, 2.2, Color("9e092c"))
+		draw_circle(stain + Vector2(1.2, 1.0), 1.2, Color("e32642"))
