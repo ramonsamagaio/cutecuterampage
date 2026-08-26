@@ -1,0 +1,42 @@
+name: Godot 4.6.3 Smoke
+
+on:
+  push:
+    branches:
+      - feature/super-darling-presentation-pass-07
+  pull_request:
+    branches:
+      - feature/arsenal-survivor-pass-06
+  workflow_dispatch:
+
+jobs:
+  godot-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.6.3
+        run: |
+          curl -L --fail --retry 3 \
+            -o /tmp/godot.zip \
+            https://github.com/godotengine/godot-builds/releases/download/4.6.3-stable/Godot_v4.6.3-stable_linux.x86_64.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v4.6.3-stable_linux.x86_64
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 --version
+
+      - name: Import and parse project
+        run: |
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 \
+            --headless \
+            --editor \
+            --path . \
+            --quit-after 8
+
+      - name: Runtime smoke Main scene
+        run: |
+          /tmp/godot/Godot_v4.6.3-stable_linux.x86_64 \
+            --headless \
+            --path . \
+            --quit-after 180
