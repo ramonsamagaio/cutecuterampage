@@ -22,6 +22,7 @@ var _hit_feedback_cooldown: float = 0.0
 var _active_cute_fx: int = 0
 var _active_player_projectiles: int = 0
 var _active_enemy_projectiles: int = 0
+var _total_kills: int = 0
 
 func _ready() -> void:
 	add_to_group("game")
@@ -269,6 +270,7 @@ func on_enemy_hit_feedback(pos: Vector2, is_critical: bool, amount: float) -> vo
 		spawn_cute_fx(pos, "impact", Vector2.ZERO, 0.82)
 
 func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -> void:
+	_total_kills += 1
 	player.register_kill()
 	if hud != null:
 		hud.on_kill()
@@ -282,8 +284,16 @@ func on_enemy_killed(pos: Vector2, xp_value: int = 1, was_elite: bool = false) -
 		spawn_cute_fx(pos + Vector2(randf_range(-8, 8), -5), "heart", Vector2.UP, 1.05)
 	if player.cute_meter >= 75.0 and randf() < 0.20:
 		spawn_cute_fx(pos + Vector2(randf_range(-10, 10), 0), "strawberry", Vector2.UP, 1.0)
-	if was_elite and randf() < 0.085:
-		spawn_reward_chest(pos, false)
+
+	# Visible reward pacing. Early guaranteed boxes teach the system; later boxes become jackpot punctuation.
+	if _total_kills == 18:
+		spawn_reward_chest(pos, false, 1)
+	elif _total_kills == 65:
+		spawn_reward_chest(pos, false, 3)
+	elif _total_kills >= 175 and _total_kills % 175 == 0:
+		spawn_reward_chest(pos, false, 3)
+	elif was_elite and randf() < 0.18:
+		spawn_reward_chest(pos, false, 3 if randf() < 0.27 else 1)
 
 func spawn_boss(power: float) -> void:
 	if is_instance_valid(current_boss):
@@ -306,25 +316,47 @@ func on_boss_defeated(pos: Vector2, defeated_name: String) -> void:
 	spawn_cute_fx(pos + Vector2(-24, -12), "heart", Vector2.UP, 1.8)
 	spawn_cute_fx(pos + Vector2(24, -6), "strawberry", Vector2.UP, 1.8)
 	add_screen_shake(12.0, 0.32)
-	spawn_reward_chest(pos, true)
+	spawn_reward_chest(pos, true, 5)
 	if hud != null:
-		hud.show_reward_toast("%s POPPED!  EVOLUTION CHEST!" % defeated_name)
+		hud.show_reward_toast("%s POPPED!  OMG!!! BOX INCOMING!" % defeated_name)
 
-func spawn_reward_chest(pos: Vector2, legendary: bool) -> void:
+func spawn_reward_chest(pos: Vector2, legendary: bool, reward_count: int = 1) -> void:
 	var chest: RewardChest = RewardChest.new()
 	chest.legendary = legendary
+	chest.reward_count = 5 if legendary else clampi(reward_count, 1, 5)
 	chest.global_position = pos
 	add_child.call_deferred(chest)
 
-func claim_reward_chest(_pos: Vector2, legendary: bool) -> void:
-	var reward_text: String
-	if legendary:
-		reward_text = player.claim_evolution_chest()
+func claim_reward_chest(_pos: Vector2, legendary: bool, reward_count: int = 1) -> void:
+	var count: int = 5 if legendary else clampi(reward_count, 1, 5)
+	var tier_name: String = "OMG!!! BOX" if count >= 5 else ("PARTY BOX" if count >= 3 else "SWEET BOX")
+	var rewards: Array[String] = []
+	var arsenal: ArsenalController = get_tree().get_first_node_in_group("arsenal") as ArsenalController
+
+	if is_instance_valid(arsenal):
+		for i: int in count:
+			# Boss/legendary boxes can evolve one ready weapon, then continue as juicy upgrade rolls.
+			var evolution_roll: bool = legendary and i == 0
+			rewards.append(arsenal.open_chest(evolution_roll))
 	else:
-		reward_text = player.claim_bonus_chest()
-	spawn_cute_fx(player.global_position + Vector2(0, -28), "powerup", Vector2.UP, 1.55 if legendary else 1.05)
-	spawn_cute_fx(player.global_position + Vector2(18, -18), "crit", Vector2.ZERO, 1.15 if legendary else 0.78)
-	add_screen_shake(5.2 if legendary else 2.6, 0.16)
+		for i: int in count:
+			if legendary and i == 0:
+				rewards.append(player.claim_evolution_chest())
+			else:
+				rewards.append(player.claim_bonus_chest())
+
+	var reward_text: String = tier_name
+	if not rewards.is_empty():
+		reward_text += "  ♡  " + "  +  ".join(rewards)
+
+	var fx_scale: float = 1.05 + float(count - 1) * 0.12
+	spawn_cute_fx(player.global_position + Vector2(0, -28), "powerup", Vector2.UP, fx_scale)
+	spawn_cute_fx(player.global_position + Vector2(18, -18), "crit", Vector2.ZERO, 0.78 + float(count) * 0.12)
+	if count >= 3:
+		spawn_cute_fx(player.global_position + Vector2(-22, -15), "heart", Vector2.UP, 1.10)
+	if count >= 5:
+		spawn_cute_fx(player.global_position + Vector2(0, -40), "strawberry", Vector2.UP, 1.45)
+	add_screen_shake(2.8 + float(count) * 1.25, 0.14 + float(count) * 0.018)
 	if hud != null:
 		hud.show_reward_toast(reward_text)
 
@@ -352,7 +384,11 @@ func trigger_special(fallback_origin: Vector2) -> void:
 	elif player.visual.scale.x < 0.0:
 		beam_direction = Vector2.LEFT
 	player.begin_special_channel()
-	add_screen_shake(8.0, 0.22)
+	# A concentrated opening flash sells the cannon firing without spawning a storm of nodes.
+	spawn_cute_fx(beam_origin, "crit", beam_direction, 1.55)
+	spawn_cute_fx(beam_origin + beam_direction * 20.0, "heart", beam_direction, 1.20)
+	spawn_cute_fx(beam_origin - Vector2(0, 18), "strawberry", Vector2.UP, 1.10)
+	add_screen_shake(10.5, 0.24)
 	var beam: TaffiStrawberryBeamVFX = TaffiStrawberryBeamVFX.new()
 	beam.name = "TaffiStrawberryOverdrive"
 	add_child(beam)
@@ -375,7 +411,7 @@ func _damage_strawberry_beam(origin: Vector2, beam_direction: Vector2) -> void:
 		var along: float = offset.dot(forward)
 		if along < -24.0 or along > SPECIAL_BEAM_LENGTH:
 			continue
-		var half_width: float = 62.0 + maxf(0.0, along) * 0.038
+		var half_width: float = 68.0 + maxf(0.0, along) * 0.040
 		var across: float = absf(offset.dot(side))
 		if across <= half_width:
 			enemy.call("take_damage", 9999.0, forward, true)
@@ -393,5 +429,6 @@ func get_perf_snapshot() -> Dictionary:
 		"enemy_projectiles": _active_enemy_projectiles,
 		"cute_fx": _active_cute_fx,
 		"blood_children": blood.get_child_count() if blood != null else 0,
-		"splats": blood.splats.size() if blood != null else 0
+		"splats": blood.splats.size() if blood != null else 0,
+		"chests": get_tree().get_nodes_in_group("reward_chest").size()
 	}
