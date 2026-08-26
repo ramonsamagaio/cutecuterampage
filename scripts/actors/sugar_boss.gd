@@ -15,6 +15,11 @@ var _dash_active: float = 0.0
 var _dash_direction: Vector2 = Vector2.ZERO
 var _orbit_sign: float = 1.0
 var _phase: int = 1
+var _draw_timer: float = 0.0
+var _dying: bool = false
+var _player_node: Node2D
+var _game_node: Node
+var _blood_node: Node
 
 func configure(scale_value: float) -> void:
 	power_scale = maxf(1.0, scale_value)
@@ -22,6 +27,11 @@ func configure(scale_value: float) -> void:
 func _ready() -> void:
 	add_to_group("enemy")
 	add_to_group("boss")
+	_player_node = get_tree().get_first_node_in_group("player") as Node2D
+	_game_node = get_tree().get_first_node_in_group("game")
+	_blood_node = get_tree().get_first_node_in_group("blood_system")
+	if _game_node != null:
+		_game_node.call("register_enemy", self)
 	max_health *= power_scale
 	contact_damage *= 1.0 + (power_scale - 1.0) * 0.16
 	move_speed *= 1.0 + minf(0.22, (power_scale - 1.0) * 0.025)
@@ -30,15 +40,24 @@ func _ready() -> void:
 	z_index = 14
 	queue_redraw()
 
+func _exit_tree() -> void:
+	if _game_node != null and is_instance_valid(_game_node):
+		_game_node.call("unregister_enemy", self)
+
 func _physics_process(delta: float) -> void:
+	if _dying:
+		return
 	_contact_cooldown = maxf(0.0, _contact_cooldown - delta)
-	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
-	if player == null:
+	_draw_timer -= delta
+	if _player_node == null or not is_instance_valid(_player_node):
+		_player_node = get_tree().get_first_node_in_group("player") as Node2D
+	if _player_node == null:
 		return
 
+	var old_phase: int = _phase
 	_phase = 2 if health <= max_health * 0.52 else 1
-	var to_player: Vector2 = global_position.direction_to(player.global_position)
-	var distance: float = global_position.distance_to(player.global_position)
+	var to_player: Vector2 = global_position.direction_to(_player_node.global_position)
+	var distance: float = global_position.distance_to(_player_node.global_position)
 
 	if _dash_active > 0.0:
 		_dash_active -= delta
@@ -46,7 +65,6 @@ func _physics_process(delta: float) -> void:
 	elif _dash_windup > 0.0:
 		_dash_windup -= delta
 		velocity = Vector2.ZERO
-		queue_redraw()
 		if _dash_windup <= 0.0:
 			_dash_direction = to_player
 			_dash_active = 0.52
@@ -65,10 +83,14 @@ func _physics_process(delta: float) -> void:
 			_choose_attack(to_player)
 
 	move_and_slide()
+	if _game_node != null and is_instance_valid(_game_node):
+		_game_node.call("update_enemy_spatial", self)
 	if distance < 54.0 and _contact_cooldown <= 0.0:
-		player.call("take_damage", contact_damage)
+		_player_node.call("take_damage", contact_damage)
 		_contact_cooldown = 0.72
-	queue_redraw()
+	if _draw_timer <= 0.0 or old_phase != _phase:
+		_draw_timer = 1.0 / 20.0
+		queue_redraw()
 
 func _choose_attack(to_player: Vector2) -> void:
 	var roll: float = randf()
@@ -80,42 +102,44 @@ func _choose_attack(to_player: Vector2) -> void:
 		_attack_timer = 2.7 if _phase == 1 else 1.9
 
 func _fire_ring(to_player: Vector2) -> void:
-	var game_node: Node = get_tree().get_first_node_in_group("game")
-	if game_node == null:
+	if _game_node == null:
 		return
 	var bullet_count: int = 12 if _phase == 1 else 18
 	var speed: float = 205.0 if _phase == 1 else 245.0
 	var offset_angle: float = to_player.angle() * 0.18
 	for i: int in bullet_count:
 		var angle: float = TAU * float(i) / float(bullet_count) + offset_angle
-		game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(angle), contact_damage * 0.48, speed)
+		_game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(angle), contact_damage * 0.48, speed)
 	if _phase == 2:
 		for i: int in 5:
 			var fan_angle: float = to_player.angle() + (float(i) - 2.0) * 0.15
-			game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(fan_angle), contact_damage * 0.55, speed * 1.12)
+			_game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(fan_angle), contact_damage * 0.55, speed * 1.12)
 
 func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critical: bool = false) -> void:
-	# Screen-clear attacks should feel enormous without deleting a boss in a single tick.
+	if _dying:
+		return
 	var applied_damage: float = amount
 	if amount >= 1000.0:
 		applied_damage = 24.0 * power_scale
 	health = maxf(0.0, health - applied_damage)
-	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
-	if blood_node != null:
-		blood_node.call("emit_burst", global_position + hit_direction * 12.0, hit_direction, 6 if is_critical else 3)
+	if _blood_node == null or not is_instance_valid(_blood_node):
+		_blood_node = get_tree().get_first_node_in_group("blood_system")
+	if _blood_node != null:
+		_blood_node.call("emit_burst", global_position + hit_direction * 12.0, hit_direction, 5 if is_critical else 2)
+	if _game_node != null:
+		_game_node.call("on_enemy_hit_feedback", global_position, is_critical, applied_damage)
 	if health <= 0.0:
+		_dying = true
 		_die(hit_direction)
 
 func _die(hit_direction: Vector2) -> void:
-	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
-	if blood_node != null:
-		blood_node.call("emit_burst", global_position, hit_direction, 44)
-		for i: int in 7:
-			var chunk_dir: Vector2 = Vector2.RIGHT.rotated(TAU * float(i) / 7.0)
-			blood_node.call("spawn_chunk", global_position + chunk_dir * 18.0, "body", Color("ffd2e2"), chunk_dir)
-	var game_node: Node = get_tree().get_first_node_in_group("game")
-	if game_node != null:
-		game_node.call("on_boss_defeated", global_position, boss_name)
+	if _blood_node != null:
+		_blood_node.call("emit_burst", global_position, hit_direction, 36)
+		for i: int in 6:
+			var chunk_dir: Vector2 = Vector2.RIGHT.rotated(TAU * float(i) / 6.0)
+			_blood_node.call("spawn_chunk", global_position + chunk_dir * 18.0, "body", Color("ffd2e2"), chunk_dir)
+	if _game_node != null:
+		_game_node.call("on_boss_defeated", global_position, boss_name)
 	queue_free()
 
 func get_health_ratio() -> float:
@@ -140,6 +164,7 @@ func _draw() -> void:
 	if pulse > 0.02:
 		draw_circle(Vector2.ZERO, 58.0 + pulse * 18.0, warning)
 
+	draw_circle(Vector2(2, 8), 48.0, Color(0.10, 0.14, 0.08, 0.20))
 	draw_circle(Vector2.ZERO, 45.0, ink)
 	draw_circle(Vector2.ZERO, 40.0, white)
 	draw_rect(Rect2(-34, -42, 20, 23), ink)

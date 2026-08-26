@@ -2,36 +2,55 @@ class_name WorldTiles
 extends RefCounted
 
 const TILE_SIZE: int = 32
-const VARIANTS: int = 4
+const VARIANTS: int = 8
 
 static func create_grass_tileset() -> TileSet:
 	var image: Image = Image.create(TILE_SIZE * VARIANTS, TILE_SIZE, false, Image.FORMAT_RGBA8)
-	var base: Color = Color8(112, 176, 76)
-	image.fill(base)
 	for variant: int in VARIANTS:
 		var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 		rng.seed = 1337 + variant * 997
-		# Keep the seamless grass calm. The concept gets density from authored-looking
-		# flowers/props, not uniform TV-static noise across every tile.
-		var detail_count: int = 7 + variant * 2
-		for _i: int in detail_count:
-			var x: int = variant * TILE_SIZE + rng.randi_range(3, TILE_SIZE - 4)
-			var y: int = rng.randi_range(3, TILE_SIZE - 4)
-			var c: Color = Color8(94, 157, 63) if rng.randf() < 0.68 else Color8(151, 196, 80)
-			image.set_pixel(x, y, c)
-			if rng.randf() < 0.42 and x + 1 < (variant + 1) * TILE_SIZE - 3:
-				image.set_pixel(x + 1, y, c)
-		if variant == 2:
-			var blade_x: int = variant * TILE_SIZE + 11
-			image.set_pixel(blade_x, 17, Color8(82, 148, 57))
-			image.set_pixel(blade_x + 1, 16, Color8(82, 148, 57))
+		var tile_origin_x: int = variant * TILE_SIZE
+		var base_shift: int = (variant % 4) - 2
+		var base: Color = Color8(111 + base_shift * 2, 176 + base_shift * 3, 76 + base_shift, 255)
+		for y: int in TILE_SIZE:
+			for x: int in TILE_SIZE:
+				var wave: float = sin(float(x + variant * 7) * 0.23) * 0.5 + cos(float(y - variant * 3) * 0.19) * 0.5
+				var lift: int = roundi(wave * 2.0)
+				image.set_pixel(tile_origin_x + x, y, Color8(
+					clampi(roundi(base.r * 255.0) + lift, 0, 255),
+					clampi(roundi(base.g * 255.0) + lift * 2, 0, 255),
+					clampi(roundi(base.b * 255.0) + lift, 0, 255),
+					255
+				))
+
+		# Sparse clusters read like blades/leaves instead of TV noise.
+		var cluster_count: int = 4 + variant % 3
+		for _cluster: int in cluster_count:
+			var cx: int = rng.randi_range(4, TILE_SIZE - 5)
+			var cy: int = rng.randi_range(4, TILE_SIZE - 5)
+			var dark: Color = Color8(76, 145 + rng.randi_range(-5, 7), 56, 255)
+			var light: Color = Color8(145, 198 + rng.randi_range(-4, 8), 84, 255)
+			image.set_pixel(tile_origin_x + cx, cy, dark)
+			image.set_pixel(tile_origin_x + cx + 1, cy - 1, light)
+			if rng.randf() < 0.62:
+				image.set_pixel(tile_origin_x + cx - 1, cy + 1, dark)
+			if rng.randf() < 0.38:
+				image.set_pixel(tile_origin_x + cx + 2, cy, light)
+
+		# A few authored accents, never on every tile.
+		if variant == 2 or variant == 6:
+			var bx: int = tile_origin_x + (10 if variant == 2 else 23)
+			var by: int = 17 if variant == 2 else 9
+			image.set_pixel(bx, by, Color8(74, 139, 55))
+			image.set_pixel(bx + 1, by - 2, Color8(93, 164, 65))
+			image.set_pixel(bx + 2, by - 4, Color8(129, 188, 75))
 		if variant == 3:
-			var fx: int = variant * TILE_SIZE + 19
-			var fy: int = 12
-			image.set_pixel(fx - 1, fy, Color8(255, 120, 176))
-			image.set_pixel(fx + 1, fy, Color8(255, 120, 176))
-			image.set_pixel(fx, fy - 1, Color8(255, 233, 195))
-			image.set_pixel(fx, fy, Color8(255, 246, 216))
+			_draw_tiny_flower(image, tile_origin_x + 19, 12, Color8(255, 124, 180), Color8(255, 242, 193))
+		elif variant == 5:
+			_draw_tiny_flower(image, tile_origin_x + 8, 22, Color8(144, 207, 255), Color8(255, 242, 193))
+		elif variant == 7:
+			_draw_tiny_flower(image, tile_origin_x + 25, 19, Color8(245, 221, 105), Color8(255, 244, 211))
+
 	var texture: ImageTexture = ImageTexture.create_from_image(image)
 	var atlas: TileSetAtlasSource = TileSetAtlasSource.new()
 	atlas.texture = texture
@@ -42,3 +61,10 @@ static func create_grass_tileset() -> TileSet:
 	tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	tile_set.add_source(atlas, 0)
 	return tile_set
+
+static func _draw_tiny_flower(image: Image, x: int, y: int, petal: Color, center: Color) -> void:
+	image.set_pixel(x - 1, y, petal)
+	image.set_pixel(x + 1, y, petal)
+	image.set_pixel(x, y - 1, petal)
+	image.set_pixel(x, y + 1, petal)
+	image.set_pixel(x, y, center)

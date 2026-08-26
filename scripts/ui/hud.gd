@@ -18,12 +18,14 @@ var boss_label: Label
 var reward_label: Label
 var special_status_label: Label
 var special_button: Button
+var perf_label: Label
 var cutin: SpecialCutin
 var world_fx: CuteWorldFX
 var level_panel: Panel
 var level_box: VBoxContainer
 var kills: int = 0
 var _reward_timer: float = 0.0
+var _ui_tick: float = 0.0
 var _upgrade_ids: Array[String] = ["sugar_rush", "heart_piercer", "bubblegum_shoes", "strawberry_core", "sprinkles", "ribbon_reflex", "plush_armor", "love_battery", "cupcake_mortar", "love_orbit"]
 var _upgrade_names: Dictionary[String, String] = {
 	"sugar_rush": "SUGAR RUSH!  Fire faster",
@@ -39,6 +41,7 @@ var _upgrade_names: Dictionary[String, String] = {
 }
 
 func _ready() -> void:
+	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 
@@ -48,6 +51,10 @@ func bind(p: TaffiController, g: Node) -> void:
 	player.level_up_requested.connect(_show_level_up)
 	player.special_requested.connect(request_special)
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F3:
+		perf_label.visible = not perf_label.visible
+
 func _build_ui() -> void:
 	var root: Control = Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -56,88 +63,73 @@ func _build_ui() -> void:
 	world_fx = CuteWorldFX.new()
 	root.add_child(world_fx)
 
-	hp_bar = _make_bar(Vector2(24, 24), Vector2(260, 22), Color("ff4f8f"))
+	hp_bar = _make_bar(Vector2(108, 29), Vector2(244, 21), Color("ff4f8f"))
 	root.add_child(hp_bar)
-	xp_bar = _make_bar(Vector2(24, 52), Vector2(260, 12), Color("9564ff"))
+	xp_bar = _make_bar(Vector2(108, 57), Vector2(244, 10), Color("8f68ff"))
 	root.add_child(xp_bar)
-	cute_bar = _make_bar(Vector2(24, 70), Vector2(260, 12), Color("ff83b8"))
+	cute_bar = _make_bar(Vector2(108, 74), Vector2(244, 10), Color("ff8fbe"))
 	root.add_child(cute_bar)
-	special_bar = _make_bar(Vector2(955, 610), Vector2(292, 18), Color("ff76b1"))
+	special_bar = _make_bar(Vector2(934, 619), Vector2(310, 18), Color("ff76b1"))
 	root.add_child(special_bar)
 
-	level_label = Label.new()
-	level_label.position = Vector2(24, 88)
-	level_label.add_theme_font_size_override("font_size", 18)
+	level_label = _make_label(Vector2(108, 87), Vector2(244, 23), 16, Color("fff4f8"), HORIZONTAL_ALIGNMENT_LEFT, 2)
 	root.add_child(level_label)
-
-	cute_label = Label.new()
-	cute_label.position = Vector2(24, 116)
-	cute_label.add_theme_font_size_override("font_size", 17)
-	cute_label.add_theme_color_override("font_color", Color("ff93bd"))
+	cute_label = _make_label(Vector2(108, 108), Vector2(244, 21), 14, Color("ffa6ca"), HORIZONTAL_ALIGNMENT_LEFT, 2)
 	root.add_child(cute_label)
-
-	danger_label = Label.new()
-	danger_label.position = Vector2(24, 142)
-	danger_label.add_theme_font_size_override("font_size", 17)
-	danger_label.add_theme_color_override("font_color", Color("ff8ba9"))
+	danger_label = _make_label(Vector2(108, 129), Vector2(244, 21), 14, Color("ff91ad"), HORIZONTAL_ALIGNMENT_LEFT, 2)
 	root.add_child(danger_label)
 
-	combo_label = Label.new()
-	combo_label.position = Vector2(500, 38)
-	combo_label.size = Vector2(360, 60)
-	combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	combo_label.add_theme_font_size_override("font_size", 30)
-	combo_label.add_theme_color_override("font_color", Color("ff8fbd"))
+	combo_label = _make_label(Vector2(493, 30), Vector2(294, 52), 26, Color("ff8fbd"), HORIZONTAL_ALIGNMENT_CENTER, 4)
+	combo_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root.add_child(combo_label)
 
-	kill_label = Label.new()
-	kill_label.position = Vector2(1090, 24)
-	kill_label.add_theme_font_size_override("font_size", 18)
+	kill_label = _make_label(Vector2(1103, 21), Vector2(142, 32), 18, Color("fff2f7"), HORIZONTAL_ALIGNMENT_CENTER, 3)
+	kill_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root.add_child(kill_label)
 
-	weapon_label = Label.new()
-	weapon_label.position = Vector2(24, 670)
-	weapon_label.size = Vector2(880, 30)
-	weapon_label.add_theme_font_size_override("font_size", 16)
-	weapon_label.add_theme_color_override("font_color", Color("ffe0ee"))
+	weapon_label = _make_label(Vector2(20, 650), Vector2(690, 30), 15, Color("ffe4ef"), HORIZONTAL_ALIGNMENT_LEFT, 2)
 	root.add_child(weapon_label)
 
-	boss_label = Label.new()
-	boss_label.position = Vector2(390, 104)
-	boss_label.size = Vector2(500, 24)
-	boss_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	boss_label.add_theme_font_size_override("font_size", 20)
-	boss_label.add_theme_color_override("font_color", Color("ffd1e2"))
+	boss_label = _make_label(Vector2(390, 102), Vector2(500, 24), 20, Color("ffd1e2"), HORIZONTAL_ALIGNMENT_CENTER, 3)
 	boss_label.visible = false
 	root.add_child(boss_label)
-	boss_bar = _make_bar(Vector2(390, 132), Vector2(500, 18), Color("e83c76"))
+	boss_bar = _make_bar(Vector2(390, 130), Vector2(500, 18), Color("e83c76"))
 	boss_bar.visible = false
 	root.add_child(boss_bar)
 
-	reward_label = Label.new()
-	reward_label.position = Vector2(340, 168)
-	reward_label.size = Vector2(600, 52)
-	reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reward_label.add_theme_font_size_override("font_size", 26)
-	reward_label.add_theme_color_override("font_color", Color("fff0a8"))
+	reward_label = _make_label(Vector2(340, 166), Vector2(600, 52), 26, Color("fff0a8"), HORIZONTAL_ALIGNMENT_CENTER, 4)
 	reward_label.visible = false
 	root.add_child(reward_label)
 
-	special_status_label = Label.new()
-	special_status_label.position = Vector2(955, 582)
-	special_status_label.size = Vector2(292, 24)
-	special_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	special_status_label.add_theme_font_size_override("font_size", 15)
-	special_status_label.add_theme_color_override("font_color", Color("ffd8e8"))
+	special_status_label = _make_label(Vector2(934, 594), Vector2(310, 20), 13, Color("ffd8e8"), HORIZONTAL_ALIGNMENT_CENTER, 2)
 	root.add_child(special_status_label)
 
 	special_button = Button.new()
 	special_button.text = "SPECIAL ♡"
-	special_button.position = Vector2(1030, 640)
-	special_button.size = Vector2(215, 54)
-	special_button.add_theme_font_size_override("font_size", 22)
+	special_button.position = Vector2(1000, 649)
+	special_button.size = Vector2(240, 43)
+	special_button.add_theme_font_size_override("font_size", 20)
+	special_button.add_theme_color_override("font_color", Color("fff3f8"))
+	special_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	special_button.add_theme_stylebox_override("normal", _button_style(Color("52203f"), Color("ff75ad")))
+	special_button.add_theme_stylebox_override("hover", _button_style(Color("6b2850"), Color("ff9bc4")))
+	special_button.add_theme_stylebox_override("pressed", _button_style(Color("3e1732"), Color("ffbad4")))
 	special_button.pressed.connect(request_special)
 	root.add_child(special_button)
+
+	perf_label = _make_label(Vector2(948, 76), Vector2(300, 132), 14, Color("e8fff4"), HORIZONTAL_ALIGNMENT_LEFT, 2)
+	var perf_style: StyleBoxFlat = StyleBoxFlat.new()
+	perf_style.bg_color = Color(0.05, 0.07, 0.08, 0.88)
+	perf_style.border_color = Color(0.48, 1.0, 0.74, 0.58)
+	perf_style.set_border_width_all(2)
+	perf_style.set_corner_radius_all(10)
+	perf_style.content_margin_left = 12
+	perf_style.content_margin_top = 9
+	perf_style.content_margin_right = 12
+	perf_style.content_margin_bottom = 9
+	perf_label.add_theme_stylebox_override("normal", perf_style)
+	perf_label.visible = false
+	root.add_child(perf_label)
 
 	cutin = SpecialCutin.new()
 	root.add_child(cutin)
@@ -145,12 +137,25 @@ func _build_ui() -> void:
 	level_panel = Panel.new()
 	level_panel.position = Vector2(380, 190)
 	level_panel.size = Vector2(520, 340)
+	level_panel.add_theme_stylebox_override("panel", _level_panel_style())
 	level_panel.visible = false
 	root.add_child(level_panel)
 	level_box = VBoxContainer.new()
 	level_box.position = Vector2(30, 25)
 	level_box.size = Vector2(460, 290)
+	level_box.add_theme_constant_override("separation", 10)
 	level_panel.add_child(level_box)
+
+func _make_label(pos: Vector2, label_size: Vector2, font_size: int, color: Color, alignment: HorizontalAlignment, outline: int) -> Label:
+	var label: Label = Label.new()
+	label.position = pos
+	label.size = label_size
+	label.horizontal_alignment = alignment
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.12, 0.04, 0.12, 0.88))
+	label.add_theme_constant_override("outline_size", outline)
+	return label
 
 func _make_bar(pos: Vector2, bar_size: Vector2, fill_color: Color) -> ProgressBar:
 	var bar: ProgressBar = ProgressBar.new()
@@ -158,20 +163,40 @@ func _make_bar(pos: Vector2, bar_size: Vector2, fill_color: Color) -> ProgressBa
 	bar.size = bar_size
 	bar.show_percentage = false
 	var background_box: StyleBoxFlat = StyleBoxFlat.new()
-	background_box.bg_color = Color("31182b")
-	background_box.corner_radius_top_left = 5
-	background_box.corner_radius_top_right = 5
-	background_box.corner_radius_bottom_left = 5
-	background_box.corner_radius_bottom_right = 5
+	background_box.bg_color = Color("241323")
+	background_box.border_color = Color(0.96, 0.56, 0.72, 0.36)
+	background_box.set_border_width_all(2)
+	background_box.set_corner_radius_all(7)
 	var fill_box: StyleBoxFlat = StyleBoxFlat.new()
 	fill_box.bg_color = fill_color
-	fill_box.corner_radius_top_left = 5
-	fill_box.corner_radius_top_right = 5
-	fill_box.corner_radius_bottom_left = 5
-	fill_box.corner_radius_bottom_right = 5
+	fill_box.border_color = fill_color.lightened(0.22)
+	fill_box.set_border_width_all(1)
+	fill_box.set_corner_radius_all(7)
 	bar.add_theme_stylebox_override("background", background_box)
 	bar.add_theme_stylebox_override("fill", fill_box)
 	return bar
+
+func _button_style(bg: Color, border: Color) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_color = border
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(11)
+	style.shadow_color = Color(0.05, 0.01, 0.05, 0.40)
+	style.shadow_size = 5
+	style.shadow_offset = Vector2(0, 3)
+	return style
+
+func _level_panel_style() -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color("36192f")
+	style.border_color = Color("ff84b6")
+	style.set_border_width_all(4)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color(0.04, 0.01, 0.04, 0.55)
+	style.shadow_size = 12
+	style.shadow_offset = Vector2(0, 5)
+	return style
 
 func _process(delta: float) -> void:
 	if player == null:
@@ -179,6 +204,10 @@ func _process(delta: float) -> void:
 	_reward_timer = maxf(0.0, _reward_timer - delta)
 	if _reward_timer <= 0.0:
 		reward_label.visible = false
+	_ui_tick -= delta
+	if _ui_tick > 0.0:
+		return
+	_ui_tick = 0.05
 
 	hp_bar.max_value = player.max_hp
 	hp_bar.value = player.hp
@@ -190,18 +219,18 @@ func _process(delta: float) -> void:
 	special_bar.value = player.special_meter
 	world_fx.set_meter(player.cute_meter)
 
-	level_label.text = "LV %d   HP %d/%d" % [player.level, roundi(player.hp), roundi(player.max_hp)]
-	cute_label.text = "CUTE %03d%%  %s  x%.2f DMG" % [roundi(player.cute_meter), player.get_cute_rank(), player.get_cute_damage_multiplier()]
+	level_label.text = "LV %d    HP %d/%d" % [player.level, roundi(player.hp), roundi(player.max_hp)]
+	cute_label.text = "CUTE %03d%%   %s   x%.2f DMG" % [roundi(player.cute_meter), player.get_cute_rank(), player.get_cute_damage_multiplier()]
 	combo_label.text = "%s\nCOMBO x%d" % [player.get_combo_caption(), player.combo] if player.combo > 0 else ""
-	kill_label.text = "♡ %d" % kills
+	kill_label.text = "♡  %d" % kills
 	weapon_label.text = player.get_weapon_summary()
 
 	var threat: int = int(game.call("get_threat_tier")) if game != null else 1
 	var run_time: float = float(game.call("get_run_time")) if game != null else 0.0
 	var minutes: int = floori(run_time / 60.0)
 	var seconds: int = floori(fmod(run_time, 60.0))
-	danger_label.text = "DANGER %02d   %02d:%02d" % [threat, minutes, seconds]
-	special_status_label.text = "AIM WITH MOUSE • STRAWBERRY BEAM" if player.special_channeling else "STRAWBERRY OVERDRIVE"
+	danger_label.text = "DANGER %02d    %02d:%02d" % [threat, minutes, seconds]
+	special_status_label.text = "AIM WITH MOUSE  •  STRAWBERRY BEAM" if player.special_channeling else "STRAWBERRY OVERDRIVE"
 	special_button.disabled = not player.can_special() or get_tree().paused
 
 	var boss_ratio: float = float(game.call("get_boss_health_ratio")) if game != null else 0.0
@@ -212,6 +241,19 @@ func _process(delta: float) -> void:
 		boss_bar.max_value = 1.0
 		boss_bar.value = boss_ratio
 		boss_label.text = String(game.call("get_boss_name"))
+
+	if perf_label.visible and game != null:
+		var stats: Dictionary = game.call("get_perf_snapshot")
+		var fps: int = roundi(Performance.get_monitor(Performance.TIME_FPS))
+		perf_label.text = "PERF  F3 TO HIDE\nFPS %d   ENEMIES %d\nPLAYER SHOTS %d   ENEMY SHOTS %d\nFX %d   FLYING GORE %d\nGROUND SPLATS %d" % [
+			fps,
+			int(stats.get("enemies", 0)),
+			int(stats.get("player_projectiles", 0)),
+			int(stats.get("enemy_projectiles", 0)),
+			int(stats.get("cute_fx", 0)),
+			int(stats.get("blood_children", 0)),
+			int(stats.get("splats", 0))
+		]
 
 func on_kill() -> void:
 	kills += 1
@@ -237,8 +279,11 @@ func _show_level_up() -> void:
 	for child: Node in level_box.get_children():
 		child.queue_free()
 	var title: Label = Label.new()
-	title.text = "LEVEL UP! ♡ Pick your sugar"
+	title.text = "LEVEL UP! ♡  PICK YOUR SUGAR"
 	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", Color("fff2f7"))
+	title.add_theme_color_override("font_outline_color", Color("32152c"))
+	title.add_theme_constant_override("outline_size", 3)
 	level_box.add_child(title)
 	var choices: Array[String] = []
 	for upgrade_id: String in _upgrade_ids:
@@ -251,6 +296,9 @@ func _show_level_up() -> void:
 		var button: Button = Button.new()
 		button.text = _upgrade_names[id]
 		button.custom_minimum_size = Vector2(440, 62)
+		button.add_theme_font_size_override("font_size", 17)
+		button.add_theme_stylebox_override("normal", _button_style(Color("4a203d"), Color("e96d9e")))
+		button.add_theme_stylebox_override("hover", _button_style(Color("65264d"), Color("ff9bc4")))
 		button.pressed.connect(_pick_upgrade.bind(id))
 		level_box.add_child(button)
 
