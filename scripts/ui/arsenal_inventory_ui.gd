@@ -5,13 +5,33 @@ var _arsenal: ArsenalController
 var _detail_open: bool = false
 var _redraw_tick: float = 0.0
 var _font: Font
+var _panel_style: StyleBoxFlat
+var _detail_style: StyleBoxFlat
+var _weapon_style: StyleBoxFlat
+var _weapon_empty_style: StyleBoxFlat
+var _passive_style: StyleBoxFlat
+var _passive_empty_style: StyleBoxFlat
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_font = ThemeDB.fallback_font
+	_panel_style = _make_style(Color(0.12, 0.045, 0.12, 0.88), Color(1.0, 0.47, 0.69, 0.48), 12, 2)
+	_detail_style = _make_style(Color(0.075, 0.025, 0.075, 0.965), Color(1.0, 0.50, 0.72, 0.88), 20, 3)
+	_weapon_style = _make_style(Color(0.20, 0.07, 0.18, 0.94), Color(1.0, 0.46, 0.69, 0.70), 7, 2)
+	_weapon_empty_style = _make_style(Color(0.20, 0.07, 0.18, 0.42), Color(1.0, 0.46, 0.69, 0.24), 7, 2)
+	_passive_style = _make_style(Color(0.13, 0.08, 0.22, 0.94), Color(0.73, 0.58, 1.0, 0.70), 7, 2)
+	_passive_empty_style = _make_style(Color(0.13, 0.08, 0.22, 0.42), Color(0.73, 0.58, 1.0, 0.24), 7, 2)
 	call_deferred("_bind_arsenal")
+
+func _make_style(fill: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(radius)
+	return style
 
 func _bind_arsenal() -> void:
 	_arsenal = get_tree().get_first_node_in_group("arsenal") as ArsenalController
@@ -46,7 +66,7 @@ func _draw() -> void:
 func _draw_compact_strip() -> void:
 	var base: Vector2 = Vector2(338, 645)
 	var panel_rect: Rect2 = Rect2(base + Vector2(-12, -10), Vector2(556, 72))
-	_draw_round_rect(panel_rect, Color(0.12, 0.045, 0.12, 0.88), Color(1.0, 0.47, 0.69, 0.48), 12.0, 2.0)
+	draw_style_box(_panel_style, panel_rect)
 	draw_string(_font, base + Vector2(0, -15), "ARSENAL   [I] DETAILS", HORIZONTAL_ALIGNMENT_LEFT, 240, 12, Color(1.0, 0.78, 0.88, 0.88))
 
 	var weapon_ids: Array[String] = []
@@ -58,30 +78,26 @@ func _draw_compact_strip() -> void:
 
 	for i: int in ArsenalCatalog.MAX_WEAPON_SLOTS:
 		var pos: Vector2 = base + Vector2(float(i) * 44.0, 0)
-		_draw_slot(Rect2(pos, Vector2(38, 29)), true, i < weapon_ids.size(), i)
-		if i < weapon_ids.size():
+		var occupied: bool = i < weapon_ids.size()
+		draw_style_box(_weapon_style if occupied else _weapon_empty_style, Rect2(pos, Vector2(38, 29)))
+		if occupied:
 			var id: String = weapon_ids[i]
 			var data: Dictionary = ArsenalCatalog.get_weapon(id)
-			var evolved: bool = bool(_arsenal.evolved.get(id, false))
-			_draw_slot_text(pos, String(data.get("short", "?")), int(_arsenal.weapons[id]), evolved)
+			var is_evolved: bool = bool(_arsenal.evolved.get(id, false))
+			_draw_slot_text(pos, String(data.get("short", "?")), int(_arsenal.weapons[id]), is_evolved)
+		else:
+			draw_string(_font, pos + Vector2(13, 20), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, 20, 10, Color(1.0, 0.88, 0.94, 0.28))
 
 	for i: int in ArsenalCatalog.MAX_PASSIVE_SLOTS:
 		var pos: Vector2 = base + Vector2(float(i) * 44.0 + 276.0, 0)
-		_draw_slot(Rect2(pos, Vector2(38, 29)), false, i < passive_ids.size(), i)
-		if i < passive_ids.size():
+		var occupied: bool = i < passive_ids.size()
+		draw_style_box(_passive_style if occupied else _passive_empty_style, Rect2(pos, Vector2(38, 29)))
+		if occupied:
 			var id: String = passive_ids[i]
 			var data: Dictionary = ArsenalCatalog.get_passive(id)
 			_draw_slot_text(pos, String(data.get("short", "?")), int(_arsenal.passives[id]), false)
-
-func _draw_slot(rect: Rect2, weapon: bool, occupied: bool, index: int) -> void:
-	var bg: Color = Color(0.20, 0.07, 0.18, 0.94) if weapon else Color(0.13, 0.08, 0.22, 0.94)
-	var border: Color = Color(1.0, 0.46, 0.69, 0.70) if weapon else Color(0.73, 0.58, 1.0, 0.70)
-	if not occupied:
-		bg.a = 0.42
-		border.a = 0.24
-	_draw_round_rect(rect, bg, border, 7.0, 2.0)
-	if not occupied:
-		draw_string(_font, rect.position + Vector2(13, 20), str(index + 1), HORIZONTAL_ALIGNMENT_LEFT, 20, 10, Color(1.0, 0.88, 0.94, 0.28))
+		else:
+			draw_string(_font, pos + Vector2(13, 20), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, 20, 10, Color(0.86, 0.80, 1.0, 0.25))
 
 func _draw_slot_text(pos: Vector2, short_name: String, level_value: int, is_evolved: bool) -> void:
 	var main_color: Color = Color(1.0, 0.88, 0.95, 1.0) if not is_evolved else Color(1.0, 0.90, 0.42, 1.0)
@@ -92,7 +108,7 @@ func _draw_slot_text(pos: Vector2, short_name: String, level_value: int, is_evol
 
 func _draw_detail_panel() -> void:
 	var rect: Rect2 = Rect2(270, 128, 740, 458)
-	_draw_round_rect(rect, Color(0.075, 0.025, 0.075, 0.965), Color(1.0, 0.50, 0.72, 0.88), 20.0, 3.0)
+	draw_style_box(_detail_style, rect)
 	draw_string(_font, Vector2(300, 164), "CUTE CUTE ARSENAL", HORIZONTAL_ALIGNMENT_LEFT, 330, 26, Color(1.0, 0.84, 0.93, 1.0))
 	draw_string(_font, Vector2(790, 159), "[I] CLOSE", HORIZONTAL_ALIGNMENT_LEFT, 160, 13, Color(1.0, 0.66, 0.80, 0.78))
 	draw_string(_font, Vector2(300, 188), "6 weapons + 6 charms • max weapon Lv 8 • charm Lv 5", HORIZONTAL_ALIGNMENT_LEFT, 620, 13, Color(0.92, 0.74, 0.90, 0.78))
@@ -107,8 +123,8 @@ func _draw_detail_panel() -> void:
 		var id: String = String(key)
 		var data: Dictionary = ArsenalCatalog.get_weapon(id)
 		var y: float = 258.0 + float(row) * 49.0
-		var evolved: bool = bool(_arsenal.evolved.get(id, false))
-		var name_text: String = String(data.get("evolution", "")) if evolved else String(data.get("name", id))
+		var is_evolved: bool = bool(_arsenal.evolved.get(id, false))
+		var name_text: String = String(data.get("evolution", "")) if is_evolved else String(data.get("name", id))
 		draw_string(_font, Vector2(300, y), name_text, HORIZONTAL_ALIGNMENT_LEFT, 330, 14, Color(1.0, 0.91, 0.96, 1.0))
 		_draw_level_pips(Vector2(300, y + 10), int(_arsenal.weapons[id]), ArsenalCatalog.MAX_WEAPON_LEVEL, Color(1.0, 0.42, 0.67, 0.9))
 		var passive_id: String = String(data.get("passive", ""))
@@ -133,12 +149,3 @@ func _draw_level_pips(origin: Vector2, value: int, maximum: int, color: Color) -
 	for i: int in maximum:
 		var c: Color = color if i < value else Color(color.r, color.g, color.b, 0.18)
 		draw_rect(Rect2(origin + Vector2(float(i) * 15.0, 0), Vector2(11, 4)), c)
-
-func _draw_round_rect(rect: Rect2, fill: Color, border: Color, radius: float, border_width: float) -> void:
-	# CanvasItem does not expose a cheap arbitrary rounded fill primitive, so use StyleBoxFlat once per panel.
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(roundi(border_width))
-	style.set_corner_radius_all(roundi(radius))
-	draw_style_box(style, rect)
