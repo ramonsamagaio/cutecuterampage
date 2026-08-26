@@ -8,7 +8,7 @@
 script = ExtResource("1_main")
 
 [node name="ConceptHUD" type="CanvasLayer" parent="."]
-layer = 1
+layer = 9
 
 [node name="Decor" type="Control" parent="ConceptHUD"]
 layout_mode = 3
