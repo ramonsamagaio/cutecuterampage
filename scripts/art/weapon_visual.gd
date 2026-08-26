@@ -29,6 +29,10 @@ var support_grip: Marker2D
 var base_kind: String = "heart"
 var current_kind: String = ""
 var _override_time: float = 0.0
+var _recoil: float = 0.0
+var _flash_time: float = 0.0
+var _base_art_position: Vector2 = Vector2.ZERO
+var _base_art_rotation: float = 0.0
 
 func _ready() -> void:
 	_ensure_nodes()
@@ -52,22 +56,34 @@ func _ensure_nodes() -> void:
 		add_child(support_grip)
 
 func _process(delta: float) -> void:
-	if Engine.is_editor_hint() or _override_time <= 0.0:
+	if Engine.is_editor_hint():
 		return
-	_override_time = maxf(0.0, _override_time - delta)
-	if _override_time <= 0.0:
-		_apply_kind(base_kind)
+	if _override_time > 0.0:
+		_override_time = maxf(0.0, _override_time - delta)
+		if _override_time <= 0.0:
+			_apply_kind(base_kind)
+	_recoil = move_toward(_recoil, 0.0, delta * 34.0)
+	_flash_time = maxf(0.0, _flash_time - delta)
+	_apply_juice_pose()
 
 func set_base_weapon(kind: String) -> void:
 	if base_kind == kind and current_kind == kind and _override_time <= 0.0:
+		kick(1.0)
 		return
 	base_kind = kind
 	if _override_time <= 0.0:
 		_apply_kind(kind)
+		kick(1.0)
 
 func flash_weapon(kind: String, duration: float = 0.4) -> void:
 	_override_time = maxf(_override_time, duration)
 	_apply_kind(kind)
+	kick(1.35)
+
+func kick(strength: float = 1.0) -> void:
+	_recoil = maxf(_recoil, 2.7 * strength)
+	_flash_time = maxf(_flash_time, 0.055 + strength * 0.018)
+	_apply_juice_pose()
 
 func get_muzzle_global_position() -> Vector2:
 	return muzzle.global_position if is_instance_valid(muzzle) else global_position
@@ -109,7 +125,15 @@ func _apply_kind(kind: String, force: bool = false) -> void:
 		_:
 			pass
 	art.texture = CutoutArtPart.make_small_texture(path, texture_size)
-	art.position = art_pos + fit_offset
-	art.rotation = base_rotation + deg_to_rad(fit_rotation_degrees)
+	_base_art_position = art_pos + fit_offset
+	_base_art_rotation = base_rotation + deg_to_rad(fit_rotation_degrees)
 	muzzle.position = muzzle_pos + fit_offset
 	support_grip.position = support_pos + fit_offset
+	_apply_juice_pose()
+
+func _apply_juice_pose() -> void:
+	if art == null or not is_instance_valid(art):
+		return
+	art.position = _base_art_position + Vector2(-_recoil, -_recoil * 0.12)
+	art.rotation = _base_art_rotation - _recoil * 0.012
+	art.self_modulate = Color(1.30, 0.88, 1.16, 1.0) if _flash_time > 0.0 else Color.WHITE
