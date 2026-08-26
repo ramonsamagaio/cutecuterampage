@@ -330,7 +330,7 @@ func spawn_reward_chest(pos: Vector2, legendary: bool, reward_count: int = 1) ->
 func claim_reward_chest(_pos: Vector2, legendary: bool, reward_count: int = 1) -> void:
 	var count: int = 5 if legendary else clampi(reward_count, 1, 5)
 	var tier_name: String = "OMG!!! BOX" if count >= 5 else ("PARTY BOX" if count >= 3 else "SWEET BOX")
-	var rewards: Array[String] = []
+	var rewards: PackedStringArray = PackedStringArray()
 	var arsenal: ArsenalController = get_tree().get_first_node_in_group("arsenal") as ArsenalController
 
 	if is_instance_valid(arsenal):
