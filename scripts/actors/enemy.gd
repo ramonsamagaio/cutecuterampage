@@ -31,12 +31,21 @@ var _leg_r: CutoutArtPart
 var _tail_art: CutoutArtPart
 var _knockback_velocity: Vector2 = Vector2.ZERO
 var _hit_flash: float = 0.0
+var _dying: bool = false
+var _game_node: Node
+var _player_node: Node2D
+var _blood_node: Node
 
 const REGISTERED_ENEMY_CANVAS: Vector2 = Vector2(36.0, 41.0)
 const BASE_VISUAL_SCALE: float = 2.36
 
 func _ready() -> void:
 	add_to_group("enemy")
+	_game_node = get_tree().get_first_node_in_group("game")
+	_player_node = get_tree().get_first_node_in_group("player") as Node2D
+	_blood_node = get_tree().get_first_node_in_group("blood_system")
+	if _game_node != null:
+		_game_node.call("register_enemy", self)
 	_build_shadow()
 	visual = Node2D.new()
 	visual.name = "Visual"
@@ -83,6 +92,10 @@ func _ready() -> void:
 	visual.modulate = _base_modulate
 	_strafe_sign = -1.0 if randf() < 0.5 else 1.0
 	_build_parts()
+
+func _exit_tree() -> void:
+	if _game_node != null and is_instance_valid(_game_node):
+		_game_node.call("unregister_enemy", self)
 
 func _build_shadow() -> void:
 	var shadow: Polygon2D = Polygon2D.new()
@@ -142,13 +155,16 @@ func _add_registered_part(path: String, layer: int) -> CutoutArtPart:
 	return part
 
 func _physics_process(delta: float) -> void:
+	if _dying:
+		return
 	attack_cooldown = maxf(0.0, attack_cooldown - delta)
 	_hit_flash = maxf(0.0, _hit_flash - delta)
-	var player_node: Node2D = get_tree().get_first_node_in_group("player") as Node2D
-	if player_node == null:
+	if _player_node == null or not is_instance_valid(_player_node):
+		_player_node = get_tree().get_first_node_in_group("player") as Node2D
+	if _player_node == null:
 		return
-	var to_player: Vector2 = global_position.direction_to(player_node.global_position)
-	var distance: float = global_position.distance_to(player_node.global_position)
+	var to_player: Vector2 = global_position.direction_to(_player_node.global_position)
+	var distance: float = global_position.distance_to(_player_node.global_position)
 	visual.modulate = _base_modulate
 
 	match archetype:
@@ -159,18 +175,19 @@ func _physics_process(delta: float) -> void:
 	velocity += _knockback_velocity
 	move_and_slide()
 	_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, delta * 560.0)
+	if _game_node != null and is_instance_valid(_game_node):
+		_game_node.call("update_enemy_spatial", self)
 	if absf(velocity.x) > 0.1:
 		visual.scale.x = absf(visual.scale.x) * signf(velocity.x)
 	_animate_parts(delta)
 	if _hit_flash > 0.0:
-		visual.modulate = Color(1.65, 0.72, 0.96, 1.0)
+		visual.modulate = Color(1.55, 0.74, 0.98, 1.0)
 
 	if distance < 42.0 and attack_cooldown <= 0.0:
 		var impact_multiplier: float = 1.55 if archetype == "charger" and _charge_active > 0.0 else 1.0
-		player_node.call("take_damage", contact_damage * impact_multiplier)
-		var game_node: Node = get_tree().get_first_node_in_group("game")
-		if game_node != null:
-			game_node.call("add_screen_shake", 4.2 if impact_multiplier > 1.0 else 2.8, 0.12)
+		_player_node.call("take_damage", contact_damage * impact_multiplier)
+		if _game_node != null:
+			_game_node.call("add_screen_shake", 4.2 if impact_multiplier > 1.0 else 2.8, 0.12)
 		attack_cooldown = 0.86
 
 func _animate_parts(delta: float) -> void:
@@ -194,11 +211,10 @@ func _move_shooter(delta: float, to_player: Vector2, distance: float) -> void:
 		velocity = to_player.rotated(PI * 0.5 * _strafe_sign) * move_speed * 0.58
 	_shoot_timer -= delta
 	if _shoot_timer <= 0.0 and distance < 590.0:
-		var game_node: Node = get_tree().get_first_node_in_group("game")
-		if game_node != null:
+		if _game_node != null:
 			var projectile_damage: float = contact_damage * 0.74
 			var projectile_speed: float = 195.0 + minf(135.0, maxf(0.0, power_scale - 1.0) * 11.0)
-			game_node.call("spawn_enemy_projectile", global_position, to_player, projectile_damage, projectile_speed)
+			_game_node.call("spawn_enemy_projectile", global_position, to_player, projectile_damage, projectile_speed)
 		var cadence: float = maxf(0.66, 1.46 - minf(0.64, power_scale * 0.058))
 		_shoot_timer = cadence + randf_range(-0.10, 0.15)
 
@@ -224,6 +240,8 @@ func _move_charger(delta: float, to_player: Vector2, distance: float) -> void:
 		_charge_cooldown = maxf(1.40, 3.05 - minf(1.45, power_scale * 0.065))
 
 func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critical: bool = false) -> void:
+	if _dying:
+		return
 	health -= amount
 	_hit_flash = 0.085 if not is_critical else 0.13
 	var push_dir: Vector2 = hit_direction.normalized()
@@ -243,40 +261,37 @@ func take_damage(amount: float, hit_direction: Vector2 = Vector2.ZERO, is_critic
 		var number: DamageNumber = DamageNumber.new()
 		root.add_child(number)
 		number.configure(global_position + Vector2(randf_range(-9.0, 9.0), -28.0), amount, is_critical)
-	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
-	if blood_node != null:
-		blood_node.call("emit_burst", global_position, push_dir, 18 if is_critical else 10)
-	var game_node: Node = get_tree().get_first_node_in_group("game")
-	if game_node != null:
-		game_node.call("on_enemy_hit_feedback", global_position, is_critical, amount)
+	if _blood_node == null or not is_instance_valid(_blood_node):
+		_blood_node = get_tree().get_first_node_in_group("blood_system")
+	if _blood_node != null:
+		_blood_node.call("emit_burst", global_position, push_dir, 13 if is_critical else 7)
+	if _game_node != null:
+		_game_node.call("on_enemy_hit_feedback", global_position, is_critical, amount)
 	if health <= 0.0:
+		_dying = true
 		_die(push_dir)
 
 func _die(hit_direction: Vector2) -> void:
-	var blood_node: Node = get_tree().get_first_node_in_group("blood_system")
-	if blood_node != null:
-		blood_node.call("emit_burst", global_position, hit_direction, 62 if elite else 40)
-		blood_node.call("add_massive_splat", global_position, 15 if elite else 10, Color("a60930"))
+	if _blood_node != null:
+		_blood_node.call("emit_burst", global_position, hit_direction, 46 if elite else 30)
+		_blood_node.call("add_massive_splat", global_position, 14 if elite else 9, Color("a60930"))
 		var chunk_parts: Array[CutoutArtPart] = []
 		for part: CutoutArtPart in parts:
 			chunk_parts.append(part)
 		chunk_parts.shuffle()
-		var chunk_count: int = mini(chunk_parts.size(), 7 if elite else 5)
+		var chunk_count: int = mini(chunk_parts.size(), 6 if elite else 4)
 		for i: int in chunk_count:
 			var chunk_part: CutoutArtPart = chunk_parts[i]
 			var force_dir: Vector2 = hit_direction
 			if force_dir == Vector2.ZERO:
 				force_dir = Vector2.RIGHT.rotated(randf() * TAU)
-			force_dir = force_dir.rotated(randf_range(-1.28, 1.28))
+			force_dir = force_dir.rotated(randf_range(-1.18, 1.18))
 			var scaled_size: Vector2 = chunk_part.target_size * absf(visual.scale.x)
-			blood_node.call("spawn_art_chunk", global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(105.0, 205.0))
-	if elite and elite_affix == "volatile":
-		var game_node: Node = get_tree().get_first_node_in_group("game")
-		if game_node != null:
-			for i: int in 12:
-				var angle: float = TAU * float(i) / 12.0
-				game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(angle), contact_damage * 0.42, 235.0)
-	var game: Node = get_tree().get_first_node_in_group("game")
-	if game != null:
-		game.call("on_enemy_killed", global_position, xp_reward, elite)
+			_blood_node.call("spawn_art_chunk", global_position, chunk_part.texture_path, scaled_size, force_dir * randf_range(100.0, 185.0))
+	if elite and elite_affix == "volatile" and _game_node != null:
+		for i: int in 12:
+			var angle: float = TAU * float(i) / 12.0
+			_game_node.call("spawn_enemy_projectile", global_position, Vector2.RIGHT.rotated(angle), contact_damage * 0.42, 235.0)
+	if _game_node != null:
+		_game_node.call("on_enemy_killed", global_position, xp_reward, elite)
 	queue_free()
