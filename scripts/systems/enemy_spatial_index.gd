@@ -62,8 +62,7 @@ func get_nearby(center: Vector2, radius: float) -> Array[Node2D]:
 	var radius_sq: float = safe_radius * safe_radius
 	for y: int in range(min_cell.y, max_cell.y + 1):
 		for x: int in range(min_cell.x, max_cell.x + 1):
-			var key: Vector2i = Vector2i(x, y)
-			var bucket_variant: Variant = _cells.get(key, null)
+			var bucket_variant: Variant = _cells.get(Vector2i(x, y), null)
 			if not (bucket_variant is Array):
 				continue
 			var bucket: Array = bucket_variant as Array
@@ -76,14 +75,29 @@ func get_nearby(center: Vector2, radius: float) -> Array[Node2D]:
 	return result
 
 func get_nearest(center: Vector2, max_range: float = 920.0) -> Node2D:
-	var nearby: Array[Node2D] = get_nearby(center, max_range)
+	# Hot targeting path: scan the relevant buckets directly instead of first building
+	# an Array of every enemy inside the full search radius. This removes a recurring
+	# allocation from Heart Blaster and other auto-targeted weapons.
+	var safe_range: float = maxf(1.0, max_range)
+	var min_cell: Vector2i = _cell_for(center - Vector2.ONE * safe_range)
+	var max_cell: Vector2i = _cell_for(center + Vector2.ONE * safe_range)
+	var range_sq: float = safe_range * safe_range
 	var nearest: Node2D = null
-	var best: float = INF
-	for enemy: Node2D in nearby:
-		var distance_sq: float = center.distance_squared_to(enemy.global_position)
-		if distance_sq < best:
-			best = distance_sq
-			nearest = enemy
+	var best_sq: float = range_sq
+	for y: int in range(min_cell.y, max_cell.y + 1):
+		for x: int in range(min_cell.x, max_cell.x + 1):
+			var bucket_variant: Variant = _cells.get(Vector2i(x, y), null)
+			if not (bucket_variant is Array):
+				continue
+			var bucket: Array = bucket_variant as Array
+			for entry: Variant in bucket:
+				var enemy: Node2D = entry as Node2D
+				if enemy == null or not is_instance_valid(enemy):
+					continue
+				var distance_sq: float = center.distance_squared_to(enemy.global_position)
+				if distance_sq <= best_sq:
+					best_sq = distance_sq
+					nearest = enemy
 	return nearest
 
 func _cell_for(pos: Vector2) -> Vector2i:
