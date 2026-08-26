@@ -13,7 +13,6 @@ var cute_label: Label
 var combo_label: Label
 var kill_label: Label
 var danger_label: Label
-var weapon_label: Label
 var boss_label: Label
 var reward_label: Label
 var special_status_label: Label
@@ -21,24 +20,12 @@ var special_button: Button
 var perf_label: Label
 var cutin: SpecialCutin
 var world_fx: CuteWorldFX
+var inventory_ui: ArsenalInventoryUI
 var level_panel: Panel
 var level_box: VBoxContainer
 var kills: int = 0
 var _reward_timer: float = 0.0
 var _ui_tick: float = 0.0
-var _upgrade_ids: Array[String] = ["sugar_rush", "heart_piercer", "bubblegum_shoes", "strawberry_core", "sprinkles", "ribbon_reflex", "plush_armor", "love_battery", "cupcake_mortar", "love_orbit"]
-var _upgrade_names: Dictionary[String, String] = {
-	"sugar_rush": "SUGAR RUSH!  Fire faster",
-	"heart_piercer": "HEART PIERCER  Heart damage + mastery",
-	"bubblegum_shoes": "BUBBLEGUM SHOES  +Speed",
-	"strawberry_core": "STRAWBERRY CORE  +HP",
-	"sprinkles": "SPRINKLES!  +Heart projectile",
-	"ribbon_reflex": "RIBBON REFLEX  Faster dash",
-	"plush_armor": "PLUSH ARMOR  Less damage",
-	"love_battery": "LOVE BATTERY  Faster Special",
-	"cupcake_mortar": "CUPCAKE MORTAR  Lob explosive cupcakes",
-	"love_orbit": "LOVE ORBIT  Hearts circle Taffi"
-}
 
 func _ready() -> void:
 	layer = 10
@@ -87,9 +74,6 @@ func _build_ui() -> void:
 	kill_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root.add_child(kill_label)
 
-	weapon_label = _make_label(Vector2(20, 650), Vector2(690, 30), 15, Color("ffe4ef"), HORIZONTAL_ALIGNMENT_LEFT, 2)
-	root.add_child(weapon_label)
-
 	boss_label = _make_label(Vector2(390, 102), Vector2(500, 24), 20, Color("ffd1e2"), HORIZONTAL_ALIGNMENT_CENTER, 3)
 	boss_label.visible = false
 	root.add_child(boss_label)
@@ -97,7 +81,8 @@ func _build_ui() -> void:
 	boss_bar.visible = false
 	root.add_child(boss_bar)
 
-	reward_label = _make_label(Vector2(340, 166), Vector2(600, 52), 26, Color("fff0a8"), HORIZONTAL_ALIGNMENT_CENTER, 4)
+	reward_label = _make_label(Vector2(300, 160), Vector2(680, 58), 25, Color("fff0a8"), HORIZONTAL_ALIGNMENT_CENTER, 4)
+	reward_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	reward_label.visible = false
 	root.add_child(reward_label)
 
@@ -117,9 +102,9 @@ func _build_ui() -> void:
 	special_button.pressed.connect(request_special)
 	root.add_child(special_button)
 
-	perf_label = _make_label(Vector2(948, 76), Vector2(300, 132), 14, Color("e8fff4"), HORIZONTAL_ALIGNMENT_LEFT, 2)
+	perf_label = _make_label(Vector2(928, 76), Vector2(324, 150), 13, Color("e8fff4"), HORIZONTAL_ALIGNMENT_LEFT, 2)
 	var perf_style: StyleBoxFlat = StyleBoxFlat.new()
-	perf_style.bg_color = Color(0.05, 0.07, 0.08, 0.88)
+	perf_style.bg_color = Color(0.05, 0.07, 0.08, 0.90)
 	perf_style.border_color = Color(0.48, 1.0, 0.74, 0.58)
 	perf_style.set_border_width_all(2)
 	perf_style.set_corner_radius_all(10)
@@ -131,18 +116,22 @@ func _build_ui() -> void:
 	perf_label.visible = false
 	root.add_child(perf_label)
 
+	inventory_ui = ArsenalInventoryUI.new()
+	inventory_ui.name = "ArsenalInventoryUI"
+	root.add_child(inventory_ui)
+
 	cutin = SpecialCutin.new()
 	root.add_child(cutin)
 
 	level_panel = Panel.new()
-	level_panel.position = Vector2(380, 190)
-	level_panel.size = Vector2(520, 340)
+	level_panel.position = Vector2(325, 150)
+	level_panel.size = Vector2(630, 420)
 	level_panel.add_theme_stylebox_override("panel", _level_panel_style())
 	level_panel.visible = false
 	root.add_child(level_panel)
 	level_box = VBoxContainer.new()
-	level_box.position = Vector2(30, 25)
-	level_box.size = Vector2(460, 290)
+	level_box.position = Vector2(28, 22)
+	level_box.size = Vector2(574, 374)
 	level_box.add_theme_constant_override("separation", 10)
 	level_panel.add_child(level_box)
 
@@ -189,13 +178,13 @@ func _button_style(bg: Color, border: Color) -> StyleBoxFlat:
 
 func _level_panel_style() -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color("36192f")
+	style.bg_color = Color("32162e")
 	style.border_color = Color("ff84b6")
 	style.set_border_width_all(4)
 	style.set_corner_radius_all(18)
-	style.shadow_color = Color(0.04, 0.01, 0.04, 0.55)
-	style.shadow_size = 12
-	style.shadow_offset = Vector2(0, 5)
+	style.shadow_color = Color(0.04, 0.01, 0.04, 0.58)
+	style.shadow_size = 14
+	style.shadow_offset = Vector2(0, 6)
 	return style
 
 func _process(delta: float) -> void:
@@ -223,7 +212,6 @@ func _process(delta: float) -> void:
 	cute_label.text = "CUTE %03d%%   %s   x%.2f DMG" % [roundi(player.cute_meter), player.get_cute_rank(), player.get_cute_damage_multiplier()]
 	combo_label.text = "%s\nCOMBO x%d" % [player.get_combo_caption(), player.combo] if player.combo > 0 else ""
 	kill_label.text = "♡  %d" % kills
-	weapon_label.text = player.get_weapon_summary()
 
 	var threat: int = int(game.call("get_threat_tier")) if game != null else 1
 	var run_time: float = float(game.call("get_run_time")) if game != null else 0.0
@@ -244,15 +232,18 @@ func _process(delta: float) -> void:
 
 	if perf_label.visible and game != null:
 		var stats: Dictionary = game.call("get_perf_snapshot")
+		var arsenal: ArsenalController = _get_arsenal()
+		var arsenal_tokens: int = arsenal.get_active_attack_token_count() if is_instance_valid(arsenal) else 0
 		var fps: int = roundi(Performance.get_monitor(Performance.TIME_FPS))
-		perf_label.text = "PERF  F3 TO HIDE\nFPS %d   ENEMIES %d\nPLAYER SHOTS %d   ENEMY SHOTS %d\nFX %d   FLYING GORE %d\nGROUND SPLATS %d" % [
+		perf_label.text = "PERF  F3 TO HIDE\nFPS %d   ENEMIES %d\nPLAYER SHOTS %d   ENEMY SHOTS %d\nFX %d   FLYING GORE %d\nGROUND SPLATS %d   ARSENAL TOKENS %d" % [
 			fps,
 			int(stats.get("enemies", 0)),
 			int(stats.get("player_projectiles", 0)),
 			int(stats.get("enemy_projectiles", 0)),
 			int(stats.get("cute_fx", 0)),
 			int(stats.get("blood_children", 0)),
-			int(stats.get("splats", 0))
+			int(stats.get("splats", 0)),
+			arsenal_tokens
 		]
 
 func on_kill() -> void:
@@ -278,31 +269,62 @@ func _show_level_up() -> void:
 	level_panel.visible = true
 	for child: Node in level_box.get_children():
 		child.queue_free()
+
 	var title: Label = Label.new()
-	title.text = "LEVEL UP! ♡  PICK YOUR SUGAR"
-	title.add_theme_font_size_override("font_size", 24)
+	title.text = "LEVEL UP! ♡  BUILD YOUR RAMPAGE"
+	title.add_theme_font_size_override("font_size", 23)
 	title.add_theme_color_override("font_color", Color("fff2f7"))
 	title.add_theme_color_override("font_outline_color", Color("32152c"))
 	title.add_theme_constant_override("outline_size", 3)
 	level_box.add_child(title)
-	var choices: Array[String] = []
-	for upgrade_id: String in _upgrade_ids:
-		if player.can_take_upgrade(upgrade_id):
-			choices.append(upgrade_id)
-	choices.shuffle()
-	var option_count: int = mini(3, choices.size())
-	for i: int in option_count:
-		var id: String = choices[i]
+
+	var hint: Label = Label.new()
+	hint.text = "6 WEAPONS + 6 CHARMS   •   Lv 8 weapon + matching charm = evolution chest"
+	hint.add_theme_font_size_override("font_size", 12)
+	hint.add_theme_color_override("font_color", Color("dcb8d1"))
+	level_box.add_child(hint)
+
+	var arsenal: ArsenalController = _get_arsenal()
+	if not is_instance_valid(arsenal):
+		var fallback: Button = Button.new()
+		fallback.text = "SWEET RECOVERY\nArsenal loading... heal for now."
+		fallback.custom_minimum_size = Vector2(560, 78)
+		fallback.pressed.connect(_fallback_heal)
+		level_box.add_child(fallback)
+		return
+
+	var choices: Array[Dictionary] = arsenal.get_level_choices(3)
+	for choice: Dictionary in choices:
+		var choice_id: String = String(choice.get("id", ""))
+		var type_text: String = String(choice.get("type", ""))
+		var name_text: String = String(choice.get("name", ""))
+		var desc_text: String = String(choice.get("description", ""))
+		var current: int = int(choice.get("level", 0))
+		var next_level: int = int(choice.get("next_level", current + 1))
+		var level_text: String = "NEW" if current <= 0 else "LV %d → %d" % [current, next_level]
 		var button: Button = Button.new()
-		button.text = _upgrade_names[id]
-		button.custom_minimum_size = Vector2(440, 62)
-		button.add_theme_font_size_override("font_size", 17)
-		button.add_theme_stylebox_override("normal", _button_style(Color("4a203d"), Color("e96d9e")))
-		button.add_theme_stylebox_override("hover", _button_style(Color("65264d"), Color("ff9bc4")))
-		button.pressed.connect(_pick_upgrade.bind(id))
+		button.text = "[%s]  %s     %s\n%s" % [type_text, name_text, level_text, desc_text]
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.custom_minimum_size = Vector2(560, 82)
+		button.add_theme_font_size_override("font_size", 15)
+		var is_weapon: bool = type_text == "WEAPON"
+		button.add_theme_stylebox_override("normal", _button_style(Color("4b1d3c") if is_weapon else Color("382047"), Color("ed6f9e") if is_weapon else Color("a785ef")))
+		button.add_theme_stylebox_override("hover", _button_style(Color("68244d") if is_weapon else Color("4e2a63"), Color("ff9bc4") if is_weapon else Color("cbb2ff")))
+		button.pressed.connect(_pick_arsenal_choice.bind(choice_id))
 		level_box.add_child(button)
 
-func _pick_upgrade(id: String) -> void:
-	player.apply_upgrade(id)
+func _pick_arsenal_choice(choice_id: String) -> void:
+	var arsenal: ArsenalController = _get_arsenal()
+	if is_instance_valid(arsenal):
+		arsenal.apply_choice(choice_id)
 	level_panel.visible = false
 	get_tree().paused = false
+
+func _fallback_heal() -> void:
+	if player != null:
+		player.hp = minf(player.max_hp, player.hp + player.max_hp * 0.25)
+	level_panel.visible = false
+	get_tree().paused = false
+
+func _get_arsenal() -> ArsenalController:
+	return get_tree().get_first_node_in_group("arsenal") as ArsenalController

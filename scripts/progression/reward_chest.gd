@@ -4,34 +4,46 @@ extends Node2D
 var legendary: bool = true
 var _opened: bool = false
 var _bob_time: float = 0.0
+var _draw_tick: float = 0.0
+var _player: Node2D
 
 func _ready() -> void:
 	add_to_group("reward_chest")
 	z_index = 20
+	_player = get_tree().get_first_node_in_group("player") as Node2D
 	queue_redraw()
 
 func _process(delta: float) -> void:
 	if _opened:
 		return
 	_bob_time += delta
-	var player: Node2D = get_tree().get_first_node_in_group("player") as Node2D
-	if player == null:
+	if not is_instance_valid(_player):
+		_player = get_tree().get_first_node_in_group("player") as Node2D
+	if _player == null:
 		return
-	var distance: float = global_position.distance_to(player.global_position)
+	var distance: float = global_position.distance_to(_player.global_position)
 	if distance < 130.0:
 		var pull: float = clampf((130.0 - distance) / 130.0, 0.0, 1.0)
-		global_position += global_position.direction_to(player.global_position) * delta * 42.0 * pull
+		global_position += global_position.direction_to(_player.global_position) * delta * 42.0 * pull
 	if distance <= 34.0:
 		_open()
-	queue_redraw()
+		return
+	_draw_tick -= delta
+	if _draw_tick <= 0.0:
+		_draw_tick = 1.0 / 24.0
+		queue_redraw()
 
 func _open() -> void:
 	if _opened:
 		return
 	_opened = true
-	var game_node: Node = get_tree().get_first_node_in_group("game")
-	if game_node != null:
-		game_node.call("claim_reward_chest", global_position, legendary)
+	var arsenal: Node = get_tree().get_first_node_in_group("arsenal")
+	if arsenal != null and arsenal.has_method("open_chest"):
+		arsenal.call("open_chest", legendary)
+	else:
+		var game_node: Node = get_tree().get_first_node_in_group("game")
+		if game_node != null:
+			game_node.call("claim_reward_chest", global_position, legendary)
 	queue_free()
 
 func _draw() -> void:
