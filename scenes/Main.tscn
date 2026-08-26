@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/debug/debug_combat_controller.gd" id="2_debug"]
 [ext_resource type="Script" path="res://scripts/ui/hud_concept_decor.gd" id="3_hud_decor"]
 [ext_resource type="Script" path="res://scripts/core/world_ambience.gd" id="4_ambience"]
 [ext_resource type="Script" path="res://scripts/ui/combat_readability_fx.gd" id="5_readability"]
+[ext_resource type="Script" path="res://scripts/core/camera_mood_controller.gd" id="6_camera_mood"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -14,6 +15,9 @@ script = ExtResource("4_ambience")
 
 [node name="CombatReadabilityFX" type="Node2D" parent="."]
 script = ExtResource("5_readability")
+
+[node name="CameraMood" type="Node" parent="."]
+script = ExtResource("6_camera_mood")
 
 [node name="ConceptHUD" type="CanvasLayer" parent="."]
 layer = 9
