@@ -165,12 +165,12 @@ pivot_fraction = Vector2(0.5, 0.5)
 
 [node name="AimRig" type="Node" parent="."]
 script = ExtResource("4_aim")
-visual_scale = 3.45
+visual_scale = 3.78
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, -20)
-zoom = Vector2(1.1, 1.1)
+zoom = Vector2(1.14, 1.14)
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
