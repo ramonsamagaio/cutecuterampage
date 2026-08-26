@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/debug/debug_combat_controller.gd" id="2_debug"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/ui/combat_readability_fx.gd" id="5_readability"]
 [ext_resource type="Script" path="res://scripts/core/camera_mood_controller.gd" id="6_camera_mood"]
 [ext_resource type="Script" path="res://scripts/core/player_motion_trail.gd" id="7_motion_trail"]
+[ext_resource type="Script" path="res://scripts/ui/screen_mood_fx.gd" id="8_screen_mood"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
@@ -22,6 +23,19 @@ script = ExtResource("5_readability")
 
 [node name="CameraMood" type="Node" parent="."]
 script = ExtResource("6_camera_mood")
+
+[node name="ScreenMoodLayer" type="CanvasLayer" parent="."]
+layer = 8
+
+[node name="MoodFX" type="Control" parent="ScreenMoodLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_screen_mood")
 
 [node name="ConceptHUD" type="CanvasLayer" parent="."]
 layer = 9
