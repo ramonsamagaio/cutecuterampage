@@ -62,7 +62,7 @@ func _build_chunk(coord: Vector2i) -> void:
 			var wx: int = coord.x * CHUNK_SIZE + x
 			var wy: int = coord.y * CHUNK_SIZE + y
 			var mixed: int = absi((wx * 73856093) ^ (wy * 19349663))
-			var variant: int = mixed % 4
+			var variant: int = mixed % WorldTiles.VARIANTS
 			layer.set_cell(Vector2i(x, y), 0, Vector2i(variant, 0), 0)
 	var dressing: GardenDressing = GardenDressing.new()
 	dressing.name = "GardenDressing"
