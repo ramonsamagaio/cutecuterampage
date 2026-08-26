@@ -34,8 +34,8 @@ func _cute_amount() -> float:
 	if not is_instance_valid(_player):
 		return 0.0
 	var value: Variant = _player.get("cute_meter")
-	if value is float:
-		return clampf(value as float, 0.0, 100.0)
+	if value is float or value is int:
+		return clampf(float(value), 0.0, 100.0)
 	return 0.0
 
 func _draw() -> void:
