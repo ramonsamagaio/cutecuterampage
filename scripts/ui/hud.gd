@@ -21,11 +21,13 @@ var perf_label: Label
 var cutin: SpecialCutin
 var world_fx: CuteWorldFX
 var inventory_ui: ArsenalInventoryUI
+var callouts: TitleCalloutSystem
 var level_panel: Panel
 var level_box: VBoxContainer
 var kills: int = 0
 var _reward_timer: float = 0.0
 var _ui_tick: float = 0.0
+var _perfect_caption_latched: bool = false
 
 func _ready() -> void:
 	layer = 10
@@ -50,43 +52,46 @@ func _build_ui() -> void:
 	world_fx = CuteWorldFX.new()
 	root.add_child(world_fx)
 
+	# Functional bars sit on top of the authored HUD chrome. The white/pink edge treatment
+	# is intentionally close to the concept art's chunky arcade readability.
 	hp_bar = _make_bar(Vector2(108, 29), Vector2(244, 21), Color("ff4f8f"))
 	root.add_child(hp_bar)
-	xp_bar = _make_bar(Vector2(108, 57), Vector2(244, 10), Color("8f68ff"))
+	xp_bar = _make_bar(Vector2(108, 57), Vector2(244, 10), Color("6ed7ff"))
 	root.add_child(xp_bar)
 	cute_bar = _make_bar(Vector2(108, 74), Vector2(244, 10), Color("ff8fbe"))
 	root.add_child(cute_bar)
 	special_bar = _make_bar(Vector2(934, 619), Vector2(310, 18), Color("ff76b1"))
 	root.add_child(special_bar)
 
-	level_label = _make_label(Vector2(108, 87), Vector2(244, 23), 16, Color("fff4f8"), HORIZONTAL_ALIGNMENT_LEFT, 2)
+	level_label = _make_label(Vector2(108, 87), Vector2(244, 23), 16, Color("fff4f8"), HORIZONTAL_ALIGNMENT_LEFT, 3)
 	root.add_child(level_label)
-	cute_label = _make_label(Vector2(108, 108), Vector2(244, 21), 14, Color("ffa6ca"), HORIZONTAL_ALIGNMENT_LEFT, 2)
+	cute_label = _make_label(Vector2(108, 108), Vector2(244, 21), 14, Color("ffa6ca"), HORIZONTAL_ALIGNMENT_LEFT, 3)
 	root.add_child(cute_label)
-	danger_label = _make_label(Vector2(108, 129), Vector2(244, 21), 14, Color("ff91ad"), HORIZONTAL_ALIGNMENT_LEFT, 2)
+	danger_label = _make_label(Vector2(108, 129), Vector2(244, 21), 14, Color("ff91ad"), HORIZONTAL_ALIGNMENT_LEFT, 3)
 	root.add_child(danger_label)
 
-	combo_label = _make_label(Vector2(493, 30), Vector2(294, 52), 26, Color("ff8fbd"), HORIZONTAL_ALIGNMENT_CENTER, 4)
+	combo_label = _make_label(Vector2(493, 30), Vector2(294, 52), 25, Color("ff9bc5"), HORIZONTAL_ALIGNMENT_CENTER, 5)
 	combo_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root.add_child(combo_label)
 
-	kill_label = _make_label(Vector2(1103, 21), Vector2(142, 32), 18, Color("fff2f7"), HORIZONTAL_ALIGNMENT_CENTER, 3)
+	kill_label = _make_label(Vector2(1103, 21), Vector2(142, 32), 18, Color("fff2f7"), HORIZONTAL_ALIGNMENT_CENTER, 4)
 	kill_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	root.add_child(kill_label)
 
-	boss_label = _make_label(Vector2(390, 102), Vector2(500, 24), 20, Color("ffd1e2"), HORIZONTAL_ALIGNMENT_CENTER, 3)
+	boss_label = _make_label(Vector2(390, 102), Vector2(500, 24), 20, Color("ffd1e2"), HORIZONTAL_ALIGNMENT_CENTER, 4)
 	boss_label.visible = false
 	root.add_child(boss_label)
 	boss_bar = _make_bar(Vector2(390, 130), Vector2(500, 18), Color("e83c76"))
 	boss_bar.visible = false
 	root.add_child(boss_bar)
 
-	reward_label = _make_label(Vector2(300, 160), Vector2(680, 58), 25, Color("fff0a8"), HORIZONTAL_ALIGNMENT_CENTER, 4)
+	# Small persistent toast. Big emotional copy is handled by TitleCalloutSystem.
+	reward_label = _make_label(Vector2(334, 160), Vector2(612, 48), 17, Color("fff0a8"), HORIZONTAL_ALIGNMENT_CENTER, 4)
 	reward_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	reward_label.visible = false
 	root.add_child(reward_label)
 
-	special_status_label = _make_label(Vector2(934, 594), Vector2(310, 20), 13, Color("ffd8e8"), HORIZONTAL_ALIGNMENT_CENTER, 2)
+	special_status_label = _make_label(Vector2(934, 594), Vector2(310, 20), 13, Color("ffd8e8"), HORIZONTAL_ALIGNMENT_CENTER, 3)
 	root.add_child(special_status_label)
 
 	special_button = Button.new()
@@ -96,9 +101,12 @@ func _build_ui() -> void:
 	special_button.add_theme_font_size_override("font_size", 20)
 	special_button.add_theme_color_override("font_color", Color("fff3f8"))
 	special_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	special_button.add_theme_color_override("font_pressed_color", Color("fff6b0"))
+	special_button.add_theme_constant_override("outline_size", 3)
+	special_button.add_theme_color_override("font_outline_color", Color("3b102f"))
 	special_button.add_theme_stylebox_override("normal", _button_style(Color("52203f"), Color("ff75ad")))
-	special_button.add_theme_stylebox_override("hover", _button_style(Color("6b2850"), Color("ff9bc4")))
-	special_button.add_theme_stylebox_override("pressed", _button_style(Color("3e1732"), Color("ffbad4")))
+	special_button.add_theme_stylebox_override("hover", _button_style(Color("742551"), Color("ffc0da")))
+	special_button.add_theme_stylebox_override("pressed", _button_style(Color("3e1732"), Color("fff0a8")))
 	special_button.pressed.connect(request_special)
 	root.add_child(special_button)
 
@@ -120,18 +128,23 @@ func _build_ui() -> void:
 	inventory_ui.name = "ArsenalInventoryUI"
 	root.add_child(inventory_ui)
 
+	callouts = TitleCalloutSystem.new()
+	callouts.name = "TitleCallouts"
+	root.add_child(callouts)
+
 	cutin = SpecialCutin.new()
+	cutin.name = "SpecialCutin"
 	root.add_child(cutin)
 
 	level_panel = Panel.new()
-	level_panel.position = Vector2(325, 150)
-	level_panel.size = Vector2(630, 420)
+	level_panel.position = Vector2(305, 137)
+	level_panel.size = Vector2(670, 448)
 	level_panel.add_theme_stylebox_override("panel", _level_panel_style())
 	level_panel.visible = false
 	root.add_child(level_panel)
 	level_box = VBoxContainer.new()
-	level_box.position = Vector2(28, 22)
-	level_box.size = Vector2(574, 374)
+	level_box.position = Vector2(30, 22)
+	level_box.size = Vector2(610, 402)
 	level_box.add_theme_constant_override("separation", 10)
 	level_panel.add_child(level_box)
 
@@ -142,8 +155,11 @@ func _make_label(pos: Vector2, label_size: Vector2, font_size: int, color: Color
 	label.horizontal_alignment = alignment
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0.12, 0.04, 0.12, 0.88))
+	label.add_theme_color_override("font_outline_color", Color("35102f"))
+	label.add_theme_color_override("font_shadow_color", Color(0.05, 0.01, 0.05, 0.52))
 	label.add_theme_constant_override("outline_size", outline)
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 3)
 	return label
 
 func _make_bar(pos: Vector2, bar_size: Vector2, fill_color: Color) -> ProgressBar:
@@ -152,15 +168,18 @@ func _make_bar(pos: Vector2, bar_size: Vector2, fill_color: Color) -> ProgressBa
 	bar.size = bar_size
 	bar.show_percentage = false
 	var background_box: StyleBoxFlat = StyleBoxFlat.new()
-	background_box.bg_color = Color("241323")
-	background_box.border_color = Color(0.96, 0.56, 0.72, 0.36)
+	background_box.bg_color = Color("1d101f")
+	background_box.border_color = Color("fff0f6")
 	background_box.set_border_width_all(2)
 	background_box.set_corner_radius_all(7)
+	background_box.shadow_color = Color(0.04, 0.01, 0.04, 0.42)
+	background_box.shadow_size = 3
+	background_box.shadow_offset = Vector2(0, 2)
 	var fill_box: StyleBoxFlat = StyleBoxFlat.new()
 	fill_box.bg_color = fill_color
-	fill_box.border_color = fill_color.lightened(0.22)
+	fill_box.border_color = fill_color.lightened(0.32)
 	fill_box.set_border_width_all(1)
-	fill_box.set_corner_radius_all(7)
+	fill_box.set_corner_radius_all(6)
 	bar.add_theme_stylebox_override("background", background_box)
 	bar.add_theme_stylebox_override("fill", fill_box)
 	return bar
@@ -171,20 +190,22 @@ func _button_style(bg: Color, border: Color) -> StyleBoxFlat:
 	style.border_color = border
 	style.set_border_width_all(3)
 	style.set_corner_radius_all(11)
-	style.shadow_color = Color(0.05, 0.01, 0.05, 0.40)
-	style.shadow_size = 5
-	style.shadow_offset = Vector2(0, 3)
+	style.shadow_color = Color(0.05, 0.01, 0.05, 0.46)
+	style.shadow_size = 6
+	style.shadow_offset = Vector2(0, 4)
+	style.content_margin_left = 15
+	style.content_margin_right = 15
 	return style
 
 func _level_panel_style() -> StyleBoxFlat:
 	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color("32162e")
-	style.border_color = Color("ff84b6")
+	style.bg_color = Color("271127")
+	style.border_color = Color("fff0f6")
 	style.set_border_width_all(4)
 	style.set_corner_radius_all(18)
-	style.shadow_color = Color(0.04, 0.01, 0.04, 0.58)
-	style.shadow_size = 14
-	style.shadow_offset = Vector2(0, 6)
+	style.shadow_color = Color(0.04, 0.01, 0.04, 0.68)
+	style.shadow_size = 16
+	style.shadow_offset = Vector2(0, 7)
 	return style
 
 func _process(delta: float) -> void:
@@ -208,18 +229,31 @@ func _process(delta: float) -> void:
 	special_bar.value = player.special_meter
 	world_fx.set_meter(player.cute_meter)
 
-	level_label.text = "LV %d    HP %d/%d" % [player.level, roundi(player.hp), roundi(player.max_hp)]
-	cute_label.text = "CUTE %03d%%   %s   x%.2f DMG" % [roundi(player.cute_meter), player.get_cute_rank(), player.get_cute_damage_multiplier()]
-	combo_label.text = "%s\nCOMBO x%d" % [player.get_combo_caption(), player.combo] if player.combo > 0 else ""
+	level_label.text = "LV. %02d     HP %d/%d" % [player.level, roundi(player.hp), roundi(player.max_hp)]
+	cute_label.text = "CUTE %03d%%   %s   ×%.2f DMG" % [roundi(player.cute_meter), player.get_cute_rank(), player.get_cute_damage_multiplier()]
+	combo_label.text = "%s\nCOMBO ×%d" % [player.get_combo_caption(), player.combo] if player.combo > 0 else ""
 	kill_label.text = "♡  %d" % kills
 
 	var threat: int = int(game.call("get_threat_tier")) if game != null else 1
 	var run_time: float = float(game.call("get_run_time")) if game != null else 0.0
 	var minutes: int = floori(run_time / 60.0)
 	var seconds: int = floori(fmod(run_time, 60.0))
-	danger_label.text = "DANGER %02d    %02d:%02d" % [threat, minutes, seconds]
-	special_status_label.text = "AIM WITH MOUSE  •  STRAWBERRY BEAM" if player.special_channeling else "STRAWBERRY OVERDRIVE"
+	danger_label.text = "DANGER %02d     %02d:%02d" % [threat, minutes, seconds]
+	special_status_label.text = "AIM WITH MOUSE  ♡  4 SEC BEAM" if player.special_channeling else ("READY!  STRAWBERRY OVERDRIVE" if player.can_special() else "STRAWBERRY OVERDRIVE")
 	special_button.disabled = not player.can_special() or get_tree().paused
+	if player.can_special():
+		special_button.text = "READY! ♡"
+	else:
+		special_button.text = "SPECIAL ♡"
+
+	callouts.show_combo_milestone(player.combo)
+	callouts.update_special_ready(player.can_special())
+	var perfect_now: bool = player.get_combo_caption() == "PERFECT!"
+	if perfect_now and not _perfect_caption_latched:
+		_perfect_caption_latched = true
+		callouts.show_callout("PERFECT DODGE!", "perfect", "TOO PRETTY TO HIT", 4)
+	elif not perfect_now:
+		_perfect_caption_latched = false
 
 	var boss_ratio: float = float(game.call("get_boss_health_ratio")) if game != null else 0.0
 	var boss_active: bool = boss_ratio > 0.0
@@ -248,15 +282,37 @@ func _process(delta: float) -> void:
 
 func on_kill() -> void:
 	kills += 1
+	if callouts != null:
+		callouts.show_kill_milestone(kills)
 
 func show_reward_toast(text: String) -> void:
 	reward_label.text = text
 	reward_label.visible = true
-	_reward_timer = 3.2
+	_reward_timer = 2.8
+	if callouts == null:
+		return
+	var upper: String = text.to_upper()
+	if upper.contains("EVOLUTION") or upper.contains("EVOLVED"):
+		callouts.show_callout("EVOLUTION!!!", "evolution", text, 9)
+	elif upper.contains("OMG"):
+		callouts.show_callout("OMG!!! BOX!!!", "chest", text, 8)
+	elif upper.contains("PARTY BOX"):
+		callouts.show_callout("PARTY BOX!!", "chest", text, 7)
+	elif upper.contains("SWEET BOX") or upper.contains("CHEST"):
+		callouts.show_callout("SWEET BOX!", "chest", text, 5)
+	elif upper.contains("NEW WEAPON"):
+		callouts.show_callout("NEW WEAPON!", "rampage", text, 5)
+	elif upper.contains("NEW CHARM"):
+		callouts.show_callout("NEW CHARM!", "cute", text, 4)
+	elif upper.contains("WARNING") or upper.contains("ARRIVED"):
+		callouts.show_callout("BOSS INCOMING!", "boss", text, 8)
+	else:
+		callouts.show_callout(text, "cute", "", 2)
 
 func request_special() -> void:
 	if player == null or game == null or not player.can_special() or get_tree().paused:
 		return
+	callouts.show_callout("STRAWBERRY OVERDRIVE!", "special", "LOVE • SUGAR • FIREPOWER", 10)
 	cutin.play()
 	await cutin.finished
 	player.consume_special()
@@ -272,23 +328,23 @@ func _show_level_up() -> void:
 
 	var title: Label = Label.new()
 	title.text = "LEVEL UP! ♡  BUILD YOUR RAMPAGE"
-	title.add_theme_font_size_override("font_size", 23)
+	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", Color("fff2f7"))
 	title.add_theme_color_override("font_outline_color", Color("32152c"))
-	title.add_theme_constant_override("outline_size", 3)
+	title.add_theme_constant_override("outline_size", 4)
 	level_box.add_child(title)
 
 	var hint: Label = Label.new()
-	hint.text = "6 WEAPONS + 6 CHARMS   •   Lv 8 weapon + matching charm = evolution chest"
+	hint.text = "6 WEAPONS + 6 CHARMS   ♡   LV 8 WEAPON + MATCHING CHARM = EVOLUTION"
 	hint.add_theme_font_size_override("font_size", 12)
-	hint.add_theme_color_override("font_color", Color("dcb8d1"))
+	hint.add_theme_color_override("font_color", Color("e8bed8"))
 	level_box.add_child(hint)
 
 	var arsenal: ArsenalController = _get_arsenal()
 	if not is_instance_valid(arsenal):
 		var fallback: Button = Button.new()
 		fallback.text = "SWEET RECOVERY\nArsenal loading... heal for now."
-		fallback.custom_minimum_size = Vector2(560, 78)
+		fallback.custom_minimum_size = Vector2(600, 78)
 		fallback.pressed.connect(_fallback_heal)
 		level_box.add_child(fallback)
 		return
@@ -301,22 +357,31 @@ func _show_level_up() -> void:
 		var desc_text: String = String(choice.get("description", ""))
 		var current: int = int(choice.get("level", 0))
 		var next_level: int = int(choice.get("next_level", current + 1))
-		var level_text: String = "NEW" if current <= 0 else "LV %d → %d" % [current, next_level]
+		var level_text: String = "NEW!" if current <= 0 else "LV %d → %d" % [current, next_level]
 		var button: Button = Button.new()
 		button.text = "[%s]  %s     %s\n%s" % [type_text, name_text, level_text, desc_text]
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size = Vector2(560, 82)
+		button.custom_minimum_size = Vector2(600, 84)
 		button.add_theme_font_size_override("font_size", 15)
+		button.add_theme_color_override("font_color", Color("fff1f7"))
+		button.add_theme_color_override("font_hover_color", Color("fff6b5"))
 		var is_weapon: bool = type_text == "WEAPON"
 		button.add_theme_stylebox_override("normal", _button_style(Color("4b1d3c") if is_weapon else Color("382047"), Color("ed6f9e") if is_weapon else Color("a785ef")))
-		button.add_theme_stylebox_override("hover", _button_style(Color("68244d") if is_weapon else Color("4e2a63"), Color("ff9bc4") if is_weapon else Color("cbb2ff")))
+		button.add_theme_stylebox_override("hover", _button_style(Color("68244d") if is_weapon else Color("4e2a63"), Color("ffb7d2") if is_weapon else Color("d6c2ff")))
 		button.pressed.connect(_pick_arsenal_choice.bind(choice_id))
 		level_box.add_child(button)
 
 func _pick_arsenal_choice(choice_id: String) -> void:
 	var arsenal: ArsenalController = _get_arsenal()
 	if is_instance_valid(arsenal):
-		arsenal.apply_choice(choice_id)
+		var reward: String = arsenal.apply_choice(choice_id)
+		if callouts != null:
+			var data_text: String = reward.to_upper()
+			var style: String = "rampage" if choice_id.begins_with("weapon:") else "cute"
+			var title: String = "WEAPON UP!" if choice_id.begins_with("weapon:") else "CHARM UP!"
+			if data_text.contains("LV 1"):
+				title = "NEW WEAPON!" if choice_id.begins_with("weapon:") else "NEW CHARM!"
+			callouts.show_callout(title, style, reward, 3)
 	level_panel.visible = false
 	get_tree().paused = false
 
