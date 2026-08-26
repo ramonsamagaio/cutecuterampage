@@ -14,7 +14,9 @@ var _last_level: int = -1
 var _last_kills: int = 0
 var _last_projectiles: int = 0
 var _special_was_ready: bool = false
+var _special_was_channeling: bool = false
 var _dodge_was_active: bool = false
+var _last_reward_text: String = ""
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -31,6 +33,7 @@ func _bind() -> void:
 		_last_xp = _player.xp
 		_last_level = _player.level
 		_special_was_ready = _player.special_meter >= 99.5
+		_special_was_channeling = _player.special_channeling
 	if _hud != null:
 		_last_kills = int(_hud.get("kills"))
 	if _game != null:
@@ -50,13 +53,14 @@ func _process(delta: float) -> void:
 		_audio.play_event("hurt", 1.0, 0.055)
 	_last_hp = hp_now
 
+	var previous_level: int = _last_level
 	var level_now: int = _player.level
-	if _last_level >= 0 and level_now > _last_level:
+	if previous_level >= 0 and level_now > previous_level:
 		_audio.play_event("level", 2.0, 0.0, true)
 	_last_level = level_now
 
 	var xp_now: int = _player.xp
-	if _last_xp >= 0 and xp_now > _last_xp and level_now == _last_level:
+	if _last_xp >= 0 and xp_now > _last_xp and level_now == previous_level:
 		_audio.play_event("pickup", -2.5, 0.065)
 	_last_xp = xp_now
 
@@ -73,11 +77,23 @@ func _process(delta: float) -> void:
 			if burst >= 4:
 				_audio.play_event("gore", -1.0, 0.08)
 		_last_kills = kills_now
+		var reward: Label = _hud.get("reward_label") as Label
+		if is_instance_valid(reward) and reward.visible and not reward.text.is_empty() and reward.text != _last_reward_text:
+			_last_reward_text = reward.text
+			if "EVOLUTION" in reward.text:
+				_audio.play_event("evolve", 2.8, 0.0, true)
+			elif "CHEST" in reward.text or "BOX" in reward.text:
+				_audio.play_event("chest", 1.5, 0.02, true)
 
 	var ready_now: bool = _player.special_meter >= 99.5
 	if ready_now and not _special_was_ready:
 		_audio.play_event("ready", 1.4, 0.0, true)
 	_special_was_ready = ready_now
+
+	var channeling_now: bool = _player.special_channeling
+	if channeling_now and not _special_was_channeling:
+		_audio.play_event("laser", 2.2, 0.025, true)
+	_special_was_channeling = channeling_now
 
 	var dodge_active: bool = float(_player.get("_perfect_dodge_flash")) > 0.0
 	if dodge_active and not _dodge_was_active:
