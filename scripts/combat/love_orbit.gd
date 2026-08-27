@@ -22,7 +22,10 @@ func configure(player: TaffiController, level_value: int, is_evolved: bool) -> v
 	z_index = 16
 
 func update_stats(level_value: int, is_evolved: bool) -> void:
-	orbit_level = maxi(1, level_value)
+	var next_level: int = maxi(1, level_value)
+	if next_level == orbit_level and is_evolved == evolved:
+		return
+	orbit_level = next_level
 	evolved = is_evolved
 	queue_redraw()
 
@@ -52,6 +55,12 @@ func _damage_nearby() -> void:
 	if evolved:
 		damage_amount *= 1.35
 	var hit_radius: float = 27.0 if evolved else 23.0
+	var hit_radius_sq: float = hit_radius * hit_radius
+	var orb_positions: Array[Vector2] = []
+	orb_positions.resize(count)
+	for i: int in count:
+		var phase: float = _angle + TAU * float(i) / float(count)
+		orb_positions[i] = global_position + Vector2.RIGHT.rotated(phase) * radius
 	var candidate_value: Variant = _game_node.call("get_enemies_near", global_position, radius + hit_radius + 8.0)
 	if not (candidate_value is Array):
 		return
@@ -60,10 +69,8 @@ func _damage_nearby() -> void:
 		var enemy: Node2D = entry as Node2D
 		if enemy == null or not is_instance_valid(enemy):
 			continue
-		for i: int in count:
-			var phase: float = _angle + TAU * float(i) / float(count)
-			var orb_pos: Vector2 = global_position + Vector2.RIGHT.rotated(phase) * radius
-			if orb_pos.distance_squared_to(enemy.global_position) <= hit_radius * hit_radius:
+		for orb_pos: Vector2 in orb_positions:
+			if orb_pos.distance_squared_to(enemy.global_position) <= hit_radius_sq:
 				enemy.call("take_damage", damage_amount, orb_pos.direction_to(enemy.global_position), false)
 				break
 

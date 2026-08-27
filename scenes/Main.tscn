@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/core/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/debug/debug_combat_controller.gd" id="2_debug"]
@@ -9,10 +9,19 @@
 [ext_resource type="Script" path="res://scripts/core/player_motion_trail.gd" id="7_motion_trail"]
 [ext_resource type="Script" path="res://scripts/ui/screen_mood_fx.gd" id="8_screen_mood"]
 [ext_resource type="Script" path="res://scripts/ui/hud_shine_fx.gd" id="9_hud_shine"]
-[ext_resource type="Script" path="res://scripts/systems/arsenal_controller.gd" id="10_arsenal"]
+[ext_resource type="Script" path="res://scripts/systems/arsenal_controller_plus.gd" id="10_arsenal"]
+[ext_resource type="Script" path="res://scripts/audio/asset_audio_director.gd" id="11_audio"]
+[ext_resource type="Script" path="res://scripts/audio/gameplay_audio_bridge.gd" id="12_audio_bridge"]
+[ext_resource type="Script" path="res://scripts/ui/arsenal_inventory_ui.gd" id="13_inventory"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
+
+[node name="AudioDirector" type="Node" parent="."]
+script = ExtResource("11_audio")
+
+[node name="GameplayAudioBridge" type="Node" parent="."]
+script = ExtResource("12_audio_bridge")
 
 [node name="WorldAmbience" type="Node2D" parent="."]
 script = ExtResource("4_ambience")
@@ -67,6 +76,19 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("9_hud_shine")
+
+[node name="ArsenalUILayer" type="CanvasLayer" parent="."]
+layer = 12
+
+[node name="Inventory" type="Control" parent="ArsenalUILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("13_inventory")
 
 [node name="DebugCombat" type="Node" parent="."]
 script = ExtResource("2_debug")

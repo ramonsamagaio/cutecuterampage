@@ -1,9 +1,9 @@
 class_name BloodSystem
 extends Node2D
 
-const MAX_SPLATS: int = 650
-const MAX_FLYING_CHILDREN: int = 170
-const REDRAW_INTERVAL: float = 1.0 / 12.0
+const MAX_SPLATS: int = 560
+const MAX_FLYING_CHILDREN: int = 130
+const REDRAW_INTERVAL: float = 1.0 / 10.0
 
 var splats: Array[Dictionary] = []
 var _redraw_pending: bool = false
@@ -27,10 +27,10 @@ func emit_burst(global_origin: Vector2, direction: Vector2, amount: int = 8) -> 
 	if active_children >= MAX_FLYING_CHILDREN:
 		return
 	var allowed: int = mini(amount, MAX_FLYING_CHILDREN - active_children)
-	if active_children > 120:
-		allowed = mini(allowed, 4)
-	elif active_children > 80:
-		allowed = mini(allowed, 8)
+	if active_children > 96:
+		allowed = mini(allowed, 3)
+	elif active_children > 66:
+		allowed = mini(allowed, 6)
 	var local_origin: Vector2 = to_local(global_origin)
 	var base_dir: Vector2 = direction.normalized()
 	if base_dir == Vector2.ZERO:

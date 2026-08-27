@@ -1,6 +1,8 @@
 class_name CuteProjectile
 extends Node2D
 
+const COLLISION_INTERVAL: float = 0.024
+
 var velocity: Vector2 = Vector2.ZERO
 var damage: float = 8.0
 var life: float = 1.5
@@ -10,10 +12,13 @@ var pierce_remaining: int = 0
 var _hit_ids: Dictionary[int, bool] = {}
 var _art: Sprite2D
 var _game_node: Node
+var _collision_tick: float = 0.0
+var _travel_dir: Vector2 = Vector2.RIGHT
 
 func configure(origin: Vector2, direction: Vector2, amount: float, kind: String = "heart", pierce: int = 0, speed: float = 390.0) -> void:
 	global_position = origin
-	velocity = direction.normalized() * speed
+	_travel_dir = direction.normalized()
+	velocity = _travel_dir * speed
 	damage = amount
 	projectile_kind = kind
 	pierce_remaining = maxi(0, pierce)
@@ -21,6 +26,7 @@ func configure(origin: Vector2, direction: Vector2, amount: float, kind: String 
 	life = 1.9 if projectile_kind == "heartstorm" else 1.5
 	rotation = direction.angle()
 	_game_node = get_tree().get_first_node_in_group("game")
+	_collision_tick = randf_range(0.0, COLLISION_INTERVAL)
 	_build_visual()
 	queue_redraw()
 
@@ -52,6 +58,10 @@ func _process(delta: float) -> void:
 	if life <= 0.0:
 		queue_free()
 		return
+	_collision_tick -= delta
+	if _collision_tick > 0.0:
+		return
+	_collision_tick += COLLISION_INTERVAL
 	if _game_node == null or not is_instance_valid(_game_node):
 		_game_node = get_tree().get_first_node_in_group("game")
 	if _game_node == null:
@@ -61,6 +71,7 @@ func _process(delta: float) -> void:
 	if not (candidate_value is Array):
 		return
 	var candidates: Array = candidate_value as Array
+	var radius_sq: float = hit_radius * hit_radius
 	for entry: Variant in candidates:
 		var enemy: Node2D = entry as Node2D
 		if enemy == null or not is_instance_valid(enemy):
@@ -68,9 +79,9 @@ func _process(delta: float) -> void:
 		var id: int = enemy.get_instance_id()
 		if _hit_ids.has(id):
 			continue
-		if global_position.distance_squared_to(enemy.global_position) <= hit_radius * hit_radius:
+		if global_position.distance_squared_to(enemy.global_position) <= radius_sq:
 			_hit_ids[id] = true
-			enemy.call("take_damage", damage * (1.75 if critical else 1.0), velocity.normalized(), critical)
+			enemy.call("take_damage", damage * (1.75 if critical else 1.0), _travel_dir, critical)
 			_spawn_hit_fx()
 			if pierce_remaining > 0:
 				pierce_remaining -= 1
@@ -93,4 +104,10 @@ func _draw() -> void:
 func _spawn_hit_fx() -> void:
 	if _game_node == null:
 		return
-	_game_node.call("spawn_cute_fx", global_position, "crit" if critical else "impact", velocity.normalized(), 1.22 if critical else 1.02)
+	# Enemy.take_damage already drives shared hit feedback. Keep a guaranteed extra flash
+	# for crits, but only a small sample of normal hits so dense multishot does not spawn
+	# a second FX node for every collision.
+	if critical:
+		_game_node.call("spawn_cute_fx", global_position, "crit", _travel_dir, 1.22)
+	elif randf() < 0.18:
+		_game_node.call("spawn_cute_fx", global_position, "impact", _travel_dir, 0.92)
